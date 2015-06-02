@@ -1,7 +1,7 @@
 EquiTrack
 =========
 
-![image](https://app.wercker.com/status/c1adb811a20b9efc952a5c3e0eb00e47/m/)
+[![Circle CI](https://circleci.com/gh/UNICEFLebanonInnovation/EquiTrack/tree/develop.svg?style=svg)](https://circleci.com/gh/UNICEFLebanonInnovation/EquiTrack/tree/develop)
 
 **Monitoring and Tracking Results for Children**
 
@@ -63,19 +63,4 @@ Mapping of partner activities:
 
 ![PCA map](/screenshots/equitrack_map.png "Map of PCAs")
 
-Deploy
-------
-
-**How do I get it for my office?**
-
-EquiTrack is distributed as a lightweight container using [Docker](https://www.docker.io/)
-This makes it extremely easy to distribute as all its dependencies are packaged into a single container that can be deployed in a single step.
-
-If you want to run a docker server and deploy EquiTrack you can get going quickly by following a few simple steps:
-
-1. Get a server running docker. Digital Ocean have great packages for this at $10 a month: https://www.digitalocean.com/community/articles/how-to-use-the-digitalocean-docker-application
-2. Login into your docker server and pull the EquiTrack image from the index: ````docker pull unicef/equitrack````
-3. Run a container once the image has finished downloading: ````docker run -d -p 80:80 -e "DJANGO_ALLOWED_HOST=yourdomin.org" unicef/equitrack supervisord````
-4. Go to yourdomain.org/admin and login with user ````admin```` and password ````admin```` then CHANGE YOUR PASSWORD NOW!
-5. Start adding data!
 

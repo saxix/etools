@@ -1,9 +1,9 @@
 __author__ = 'jcranwellward'
 
-import re
 import datetime
 
 from django.contrib import admin
+from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 
 import autocomplete_light
@@ -11,7 +11,10 @@ from reversion import VersionAdmin
 from import_export.admin import ImportExportMixin, ExportMixin, base_formats
 from generic_links.admin import GenericLinkStackedInline
 
+from .forms import PCAForm
+from tpm.models import TPMVisit
 from EquiTrack.utils import get_changeform_link
+from locations.models import Location
 from funds.models import Grant
 from reports.models import (
     WBS,
@@ -22,8 +25,8 @@ from reports.models import (
     IntermediateResult
 )
 from partners.exports import (
-    SHPFormat,
-    KMLFormat,
+    # KMLFormat,
+    DonorsFormat,
     PCAResource,
     PartnerResource,
 )
@@ -40,7 +43,11 @@ from partners.models import (
     PCASectorActivity,
     IndicatorProgress,
     PCASectorImmediateResult,
-    PartnerOrganization
+    PartnerOrganization,
+    Assessment,
+    SpotCheck,
+    Recommendation,
+    ResultChain
 )
 
 from partners.filters import (
@@ -54,33 +61,10 @@ from partners.filters import (
     PCAIndicatorFilter,
     PCAOutputFilter
 )
+from partners.mixins import ReadOnlyMixin, SectorMixin
 
 
-class SectorMixin(object):
-    """
-    Mixin class to get the sector from the admin URL
-    """
-    model_admin_re = re.compile(r'^/admin/(?P<app>\w*)/(?P<model>\w*)/(?P<id>\w+)/$')
-
-    def get_sector_from_request(self, request):
-        results = self.model_admin_re.search(request.path)
-        if results:
-            pca_sector_id = results.group('id')
-            return PCASector.objects.get(id=pca_sector_id)
-        return None
-
-    def get_sector(self, request):
-        if not getattr(self, '_sector', False):
-            self._sector = self.get_sector_from_request(request).sector
-        return self._sector
-
-    def get_pca(self, request):
-        if not getattr(self, '_pca', False):
-            self._pca = self.get_sector_from_request(request).pca
-        return self._pca
-
-
-class PcaIRInlineAdmin(SectorMixin, admin.StackedInline):
+class PcaIRInlineAdmin(ReadOnlyMixin, SectorMixin, admin.StackedInline):
     model = PCASectorImmediateResult
     filter_horizontal = ('wbs_activities',)
     extra = 0
@@ -111,20 +95,23 @@ class PcaIRInlineAdmin(SectorMixin, admin.StackedInline):
         )
 
 
-class PcaLocationInlineAdmin(admin.TabularInline):
+class PcaLocationInlineAdmin(ReadOnlyMixin, admin.TabularInline):
     model = GwPCALocation
     verbose_name = 'Location'
     verbose_name_plural = 'Locations'
+    suit_classes = u'suit-tab suit-tab-locations'
     fields = (
+        'sector',
         'governorate',
         'region',
         'locality',
         'location',
+        'tpm_visit',
     )
     extra = 5
 
 
-class PcaIndicatorInlineAdmin(SectorMixin, admin.StackedInline):
+class PcaIndicatorInlineAdmin(ReadOnlyMixin, SectorMixin, admin.StackedInline):
 
     model = IndicatorProgress
     verbose_name = 'Indicator'
@@ -161,7 +148,7 @@ class PcaIndicatorInlineAdmin(SectorMixin, admin.StackedInline):
         )
 
 
-class PcaGoalInlineAdmin(SectorMixin, admin.TabularInline):
+class PcaGoalInlineAdmin(ReadOnlyMixin, SectorMixin, admin.TabularInline):
     verbose_name = 'CCC'
     verbose_name_plural = 'CCCs'
     model = PCASectorGoal
@@ -180,7 +167,7 @@ class PcaGoalInlineAdmin(SectorMixin, admin.TabularInline):
         )
 
 
-class PcaOutputInlineAdmin(SectorMixin, admin.TabularInline):
+class PcaOutputInlineAdmin(ReadOnlyMixin, SectorMixin, admin.TabularInline):
     verbose_name = 'Output'
     model = PCASectorOutput
     extra = 0
@@ -199,7 +186,7 @@ class PcaOutputInlineAdmin(SectorMixin, admin.TabularInline):
         )
 
 
-class PcaActivityInlineAdmin(SectorMixin, admin.TabularInline):
+class PcaActivityInlineAdmin(ReadOnlyMixin, SectorMixin, admin.TabularInline):
     model = PCASectorActivity
     extra = 0
 
@@ -216,10 +203,11 @@ class PcaActivityInlineAdmin(SectorMixin, admin.TabularInline):
         )
 
 
-class PcaSectorInlineAdmin(admin.TabularInline):
+class PcaSectorInlineAdmin(ReadOnlyMixin, admin.TabularInline):
     model = PCASector
     verbose_name = 'Sector'
     verbose_name_plural = 'Sectors'
+    suit_classes = u'suit-tab suit-tab-info'
     extra = 0
     fields = (
         'sector',
@@ -230,10 +218,11 @@ class PcaSectorInlineAdmin(admin.TabularInline):
     )
 
 
-class PCAFileInline(admin.TabularInline):
+class PCAFileInline(ReadOnlyMixin, admin.TabularInline):
     model = PCAFile
     verbose_name = 'File'
     verbose_name_plural = 'Files'
+    suit_classes = u'suit-tab suit-tab-info'
     extra = 0
     fields = (
         'type',
@@ -245,17 +234,18 @@ class PCAFileInline(admin.TabularInline):
     )
 
 
-class PcaGrantInlineAdmin(admin.TabularInline):
+class PcaGrantInlineAdmin(ReadOnlyMixin, admin.TabularInline):
     form = autocomplete_light.modelform_factory(
         Grant
     )
     model = PCAGrant
     verbose_name = 'Grant'
     verbose_name_plural = 'Grants'
+    suit_classes = u'suit-tab suit-tab-info'
     extra = 0
 
 
-class PcaSectorAdmin(SectorMixin, VersionAdmin):
+class PcaSectorAdmin(ReadOnlyMixin, SectorMixin, VersionAdmin):
     form = autocomplete_light.modelform_factory(
         PCASector
     )
@@ -276,13 +266,29 @@ class PcaSectorAdmin(SectorMixin, VersionAdmin):
     )
 
 
-class PcaAdmin(ExportMixin, VersionAdmin):
+class LinksInlineAdmin(ReadOnlyMixin, GenericLinkStackedInline):
+    suit_classes = u'suit-tab suit-tab-info'
+    extra = 1
+
+
+class SpotChecksAdminInline(ReadOnlyMixin, admin.StackedInline):
+    suit_classes = u'suit-tab suit-tab-checks'
+    model = SpotCheck
+
+
+class ResultsInlineAdmin(ReadOnlyMixin, admin.TabularInline):
+    suit_classes = u'suit-tab suit-tab-results'
+    model = ResultChain
+
+
+class PcaAdmin(ReadOnlyMixin, ExportMixin, VersionAdmin):
+    form = PCAForm
     resource_class = PCAResource
     # Add custom exports
     formats = (
         base_formats.CSV,
-        KMLFormat,
-        SHPFormat,
+        DonorsFormat,
+        # KMLFormat,
     )
     date_hierarchy = 'start_date'
     list_display = (
@@ -301,12 +307,15 @@ class PcaAdmin(ExportMixin, VersionAdmin):
         'total_cash',
     )
     list_filter = (
+        'agreement_type',
         'result_structure',
         PCASectorFilter,
         'status',
         'amendment',
+        'current',
         'start_date',
         'end_date',
+        'signed_by_unicef_date',
         'partner',
         PCADonorFilter,
         PCAGrantFilter,
@@ -335,15 +344,18 @@ class PcaAdmin(ExportMixin, VersionAdmin):
     )
     fieldsets = (
         (_('Info'), {
+            u'classes': (u'suit-tab suit-tab-info',),
             'fields':
-                ('result_structure',
+                ('agreement_type',
+                 'result_structure',
                  ('number', 'amendment', 'amendment_number', 'view_original',),
                  'title',
                  'status',
                  'partner',
-                 'initiation_date',)
+                 'initiation_date')
         }),
         (_('Dates'), {
+            u'classes': (u'suit-tab suit-tab-info',),
             'fields':
                 (('start_date', 'end_date',),
                  ('signed_by_unicef_date', 'signed_by_partner_date',),
@@ -354,13 +366,20 @@ class PcaAdmin(ExportMixin, VersionAdmin):
 
         }),
         (_('Budget'), {
+            u'classes': (u'suit-tab suit-tab-info',),
             'fields':
                 ('partner_contribution_budget',
                  ('unicef_cash_budget', 'in_kind_amount_budget', 'total_unicef_contribution',),
                  'total_cash',
                 ),
         }),
+        (_('Add sites by P Code'), {
+            u'classes': (u'suit-tab suit-tab-locations',),
+            'fields': ('location_sector', 'p_codes',),
+        }),
     )
+    remove_fields_if_read_only = ('location_sector', 'p_codes',)
+
     actions = ['create_amendment']
 
     inlines = (
@@ -368,7 +387,20 @@ class PcaAdmin(ExportMixin, VersionAdmin):
         PcaSectorInlineAdmin,
         PcaLocationInlineAdmin,
         PCAFileInline,
-        GenericLinkStackedInline,
+        LinksInlineAdmin,
+        SpotChecksAdminInline,
+        ResultsInlineAdmin,
+    )
+
+    suit_form_tabs = (
+        (u'info', u'Info'),
+        (u'results', u'Results'),
+        (u'locations', u'Locations'),
+        (u'checks', u'Spot Checks'),
+    )
+
+    suit_form_includes = (
+        ('admin/partners/log_frame.html', 'top', 'results'),
     )
 
     def created_date(self, obj):
@@ -387,11 +419,85 @@ class PcaAdmin(ExportMixin, VersionAdmin):
     view_original.allow_tags = True
     view_original.short_description = 'View Original PCA'
 
+    def save_formset(self, request, form, formset, change):
+        """
+        Overriding this to create TPM visits on location records
+        """
+        formset.save()
+        if change:
+            for form in formset.forms:
+                obj = form.instance
+                if isinstance(obj, GwPCALocation) and obj.tpm_visit:
+                    visits = TPMVisit.objects.filter(
+                        pca=obj.pca,
+                        pca_location=obj,
+                        completed_date__isnull=True
+                    )
+                    if not visits:
+                        TPMVisit.objects.create(
+                            pca=obj.pca,
+                            pca_location=obj,
+                            assigned_by=request.user
+                        )
+
+    def save_model(self, request, obj, form, change):
+        """
+        Overriding this to create locations from p_codes
+        """
+        p_codes = form.cleaned_data['p_codes']
+        location_sector = form.cleaned_data['location_sector']
+        if p_codes:
+            p_codes_list = p_codes.split()
+            created, notfound = 0, 0
+            for p_code in p_codes_list:
+                try:
+                    location = Location.objects.get(
+                        p_code=p_code
+                    )
+                    loc, new = GwPCALocation.objects.get_or_create(
+                        sector=location_sector,
+                        governorate=location.locality.region.governorate,
+                        region=location.locality.region,
+                        locality=location.locality,
+                        location=location,
+                        pca=obj
+                    )
+                    if new:
+                        created += 1
+                except Location.DoesNotExist:
+                    notfound += 1
+
+            messages.info(
+                request,
+                'Assigned {} locations, {} were not found'.format(
+                    created, notfound
+                ))
+
+        super(PcaAdmin, self).save_model(request, obj, form, change)
+
+
+class AssessmentAdminInline(admin.StackedInline):
+    model = Assessment
+    extra = 1
+    fields = (
+        u'type',
+        u'planned_date',
+        u'completed_date',
+        u'rating',
+        u'notes',
+        u'report',
+        u'download_url',
+    )
+    readonly_fields = (
+        u'download_url',
+    )
+
 
 class PartnerAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_class = PartnerResource
     list_display = (
         u'name',
+        u'type',
         u'description',
         u'email',
         u'contact_person',
@@ -399,6 +505,9 @@ class PartnerAdmin(ImportExportMixin, admin.ModelAdmin):
         u'alternate_id',
         u'alternate_name',
     )
+    inlines = [
+        AssessmentAdminInline,
+    ]
 
 
 class FACEAdmin(admin.ModelAdmin):
@@ -412,8 +521,35 @@ class FACEAdmin(admin.ModelAdmin):
     )
 
 
+class RecommendationsInlineAdmin(admin.TabularInline):
+    model = Recommendation
+    extra = 0
+
+
+class AssessmentAdmin(VersionAdmin, admin.ModelAdmin):
+    inlines = [RecommendationsInlineAdmin]
+    readonly_fields = (
+        u'download_url',
+        u'requested_date',
+        u'requesting_officer',
+        u'approving_officer',
+
+    )
+
+    def save_model(self, request, obj, form, change):
+
+        if not change:
+            obj.requesting_officer = request.user
+
+        super(AssessmentAdmin, self).save_model(
+            request, obj, form, change
+        )
+
+
 admin.site.register(PCA, PcaAdmin)
 admin.site.register(PCASector, PcaSectorAdmin)
 admin.site.register(PartnerOrganization, PartnerAdmin)
 admin.site.register(FileType)
 admin.site.register(FACE, FACEAdmin)
+admin.site.register(Assessment, AssessmentAdmin)
+

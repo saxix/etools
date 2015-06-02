@@ -12,33 +12,21 @@ from django.db.models.signals import post_save
 from django.contrib.sites.models import Site
 
 from filer.fields.file import FilerFileField
-from post_office import mail
-from post_office.models import EmailTemplate
 import reversion
 
-from EquiTrack.utils import AdminURLMixin
+from EquiTrack.mixins import AdminURLMixin
 from locations.models import LinkedLocation
 from reports.models import WBS
 from funds.models import Grant
+from . import emails
 
 User = get_user_model()
-
-User.__unicode__ = lambda user: user.get_full_name()
 
 BOOL_CHOICES = (
     (None, "N/A"),
     (True, "Yes"),
     (False, "No")
 )
-
-
-def send_mail(sender, template, variables, *recipients):
-    mail.send(
-        [recp for recp in recipients],
-        sender,
-        template=template,
-        context=variables,
-    )
 
 
 class Office(models.Model):
@@ -51,27 +39,38 @@ class Office(models.Model):
 class Trip(AdminURLMixin, models.Model):
 
     PLANNED = u'planned'
+    SUBMITTED = u'submitted'
     APPROVED = u'approved'
     COMPLETED = u'completed'
     CANCELLED = u'cancelled'
     TRIP_STATUS = (
         (PLANNED, u"Planned"),
+        (SUBMITTED, u"Submitted"),
         (APPROVED, u"Approved"),
         (COMPLETED, u"Completed"),
         (CANCELLED, u"Cancelled"),
     )
 
+    PROGRAMME_MONITORING = u'programme_monitoring'
+    ADVOCACY = u'advocacy'
+    TECHNICAL_SUPPORT = u'technical_support'
+    MEETING = u'meeting'
     DUTY_TRAVEL = u'duty_travel'
     HOME_LEAVE = u'home_leave'
     FAMILY_VISIT = u'family_visit'
     EDUCATION_GRANT = u'education_grant'
     STAFF_DEVELOPMENT = u'staff_development'
     TRAVEL_TYPE = (
-        (DUTY_TRAVEL, u"DUTY TRAVEL"),
-        (HOME_LEAVE, u"HOME LEAVE"),
-        (FAMILY_VISIT, u"FAMILY VISIT"),
-        (EDUCATION_GRANT, u"EDUCATION GRANT"),
+        (PROGRAMME_MONITORING, u'PROGRAMME MONITORING'),
+        (ADVOCACY, u'ADVOCACY'),
+        (TECHNICAL_SUPPORT, u'TECHNICAL SUPPORT'),
+        (MEETING, u'MEETING'),
         (STAFF_DEVELOPMENT, u"STAFF DEVELOPMENT"),
+        # (DUTY_TRAVEL, u"DUTY TRAVEL"),
+        # (HOME_LEAVE, u"HOME LEAVE"),
+        # (FAMILY_VISIT, u"FAMILY VISIT"),
+        # (EDUCATION_GRANT, u"EDUCATION GRANT"),
+
     )
 
     status = models.CharField(
@@ -79,13 +78,22 @@ class Trip(AdminURLMixin, models.Model):
         choices=TRIP_STATUS,
         default=PLANNED,
     )
+    cancelled_reason = models.CharField(
+        max_length=254,
+        blank=True, null=True,
+        help_text='Please provide a reason if the mission is cancelled'
+    )
     purpose_of_travel = models.CharField(
         max_length=254
     )
     travel_type = models.CharField(
         max_length=32L,
         choices=TRAVEL_TYPE,
-        default=DUTY_TRAVEL
+        default=PROGRAMME_MONITORING
+    )
+    security_clearance_required = models.BooleanField(
+        default=False,
+        help_text='Do you need security clarance for this trip?'
     )
     international_travel = models.BooleanField(
         default=False,
@@ -93,12 +101,7 @@ class Trip(AdminURLMixin, models.Model):
     )
     from_date = models.DateField()
     to_date = models.DateField()
-    monitoring_supply_delivery = models.BooleanField(default=False)
-    no_pca = models.BooleanField(
-        default=False,
-        verbose_name=u'Not related to a PCA',
-        help_text='Tick this if this trip is not related to partner monitoring'
-    )
+
     pcas = models.ManyToManyField(
         u'partners.PCA',
         blank=True, null=True,
@@ -162,7 +165,8 @@ class Trip(AdminURLMixin, models.Model):
     approved_by_human_resources = models.NullBooleanField(
         default=None,
         choices=BOOL_CHOICES,
-        verbose_name='Certified by human resources')
+        verbose_name='Certified by human resources',
+        help_text='HR must approve all trips relating to training and staff development')
     date_human_resources_approved = models.DateField(blank=True, null=True)
 
     representative = models.ForeignKey(User, related_name='approved_trips', blank=True, null=True)
@@ -171,6 +175,12 @@ class Trip(AdminURLMixin, models.Model):
 
     approved_date = models.DateField(blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
+    approved_email_sent = models.BooleanField(default=False)
+
+    ta_trip_took_place_as_planned = models.BooleanField(
+        default=False,
+        help_text='Did the trip take place as planned and therefore no claim is required?'
+    )
 
     class Meta:
         ordering = ['-created_date']
@@ -193,7 +203,7 @@ class Trip(AdminURLMixin, models.Model):
 
     def outstanding_actions(self):
         return self.actionpoint_set.filter(
-            closed=False).count()
+            status='open').count()
 
     @property
     def trip_revision(self):
@@ -202,9 +212,6 @@ class Trip(AdminURLMixin, models.Model):
     @property
     def requires_hr_approval(self):
         return self.travel_type in [
-            Trip.HOME_LEAVE,
-            Trip.FAMILY_VISIT,
-            Trip.EDUCATION_GRANT,
             Trip.STAFF_DEVELOPMENT]
 
     @property
@@ -213,6 +220,8 @@ class Trip(AdminURLMixin, models.Model):
 
     @property
     def can_be_approved(self):
+        if self.status != Trip.SUBMITTED:
+            return False
         if not self.approved_by_supervisor:
             return False
         if self.requires_hr_approval\
@@ -224,9 +233,11 @@ class Trip(AdminURLMixin, models.Model):
         return True
 
     def save(self, **kwargs):
-        if self.status == Trip.PLANNED and self.can_be_approved:
+        # check if trip can be approved
+        if self.can_be_approved:
             self.approved_date = datetime.datetime.today()
             self.status = Trip.APPROVED
+
         super(Trip, self).save(**kwargs)
 
     @classmethod
@@ -234,10 +245,6 @@ class Trip(AdminURLMixin, models.Model):
         """
         Trip emails alerts are sent at various stages...
         """
-
-        current_site = Site.objects.get_current()
-        state = 'Created' if created else 'Updated'
-
         # default list of recipients
         recipients = [
             instance.owner.email,
@@ -245,197 +252,60 @@ class Trip(AdminURLMixin, models.Model):
         if instance.budget_owner:
             recipients.append(instance.budget_owner.email)
 
-        # 1. send an email each time the trip is modified
-        send_mail(
-            instance.owner.email,
-            'trips/trip/created/updated',
-            {
-                'owner_name': instance.owner.get_full_name(),
-                'number': instance.reference(),
-                'state': state,
-                'url': 'http://{}{}'.format(
-                    current_site.domain,
-                    instance.get_admin_url()
-                )
-            },
-            *recipients
-        )
-
-        # send an email to everyone if the trip is cancelled
-        if instance.status == Trip.CANCELLED:
-            email_name = 'trips/trip/cancelled'
-            try:
-                template = EmailTemplate.objects.get(
-                    name=email_name
-                )
-            except EmailTemplate.DoesNotExist:
-                template = EmailTemplate.objects.create(
-                    name=email_name,
-                    description='The email that is sent to everyone if a trip has been cancelled',
-                    subject="Trip Cancelled: {{trip_reference}}",
-                    content="The following trip has been cancelled: {{trip_reference}}"
-                            "\r\n\r\n{{url}}"
-                            "\r\n\r\nThank you."
+        if instance.status == Trip.SUBMITTED:
+            emails.TripCreatedEmail(instance).send(
+                instance.owner.email,
+                *recipients
+            )
+            if instance.international_travel and instance.approved_by_supervisor:
+                recipients.append(instance.representative.email)
+                emails.TripRepresentativeEmail(instance).send(
+                    instance.owner.email,
+                    *recipients
                 )
 
+        elif instance.status == Trip.CANCELLED:
+            # send an email to everyone if the trip is cancelled
             if instance.travel_assistant:
                 recipients.append(instance.travel_assistant.email)
-
-            send_mail(
+            emails.TripCancelledEmail(instance).send(
                 instance.owner.email,
-                template,
-                {
-                    'trip_reference': instance.reference(),
-                    'url': 'http://{}{}'.format(
-                        current_site.domain,
-                        instance.get_admin_url()
-                    )
-                },
                 *recipients
             )
-
-        if instance.status == Trip.APPROVED:
-            email_name = 'trips/trip/approved'
-            try:
-                template = EmailTemplate.objects.get(
-                    name=email_name
-                )
-            except EmailTemplate.DoesNotExist:
-                template = EmailTemplate.objects.create(
-                    name=email_name,
-                    description='The email that is sent to the traveller if a trip has been approved',
-                    subject="Trip Approved: {{trip_reference}}",
-                    content="The following trip has been approved: {{trip_reference}}"
-                            "\r\n\r\n{{url}}"
-                            "\r\n\r\nThank you."
-                )
-            send_mail(
-                instance.owner.email,
-                template,
-                {
-                    'trip_reference': instance.reference(),
-                    'url': 'http://{}{}'.format(
-                        current_site.domain,
-                        instance.get_admin_url()
-                    )
-                },
-                *recipients
-            )
+        elif instance.status == Trip.APPROVED:
             if instance.travel_assistant and not instance.transport_booked:
-                email_name = "travel/trip/travel_or_admin_assistant"
-                try:
-                    template = EmailTemplate.objects.get(
-                        name=email_name
-                    )
-                except EmailTemplate.DoesNotExist:
-                    template = EmailTemplate.objects.create(
-                        name=email_name,
-                        description="This e-mail will be sent when the trip is approved by the supervisor. "
-                                    "It will go to the travel assistant to prompt them to organise the travel "
-                                    "(vehicles, flights etc.) and request security clearance.",
-                        subject="Travel for {{owner_name}}",
-                        content="Dear {{travel_assistant}},"
-                                "\r\n\r\nPlease organise the travel and security clearance (if needed) for the following trip:"
-                                "\r\n\r\n{{url}}"
-                                "\r\n\r\nThanks,"
-                                "\r\n{{owner_name}}"
-                    )
-                send_mail(
+                emails.TripTravelAssistantEmail(instance).send(
                     instance.owner.email,
-                    template,
-                    {
-                        'owner_name': instance.owner.get_full_name(),
-                        'travel_assistant': instance.travel_assistant.get_full_name(),
-                        'url': 'http://{}{}'.format(
-                            current_site.domain,
-                            instance.get_admin_url()
-                        )
-                    },
-                    instance.travel_assistant.email,
+                    instance.travel_assistant.email
                 )
 
             if instance.ta_required and instance.programme_assistant and not instance.ta_drafted:
-                email_name = 'trips/trip/TA_request'
-                try:
-                    template = EmailTemplate.objects.get(
-                        name=email_name
-                    )
-                except EmailTemplate.DoesNotExist:
-                    template = EmailTemplate.objects.create(
-                        name=email_name,
-                        description="This email is sent to the relevant programme assistant to create "
-                                    "the TA for the staff in concern after the approval of the supervisor.",
-                        subject="Travel Authorization request for {{owner_name}}",
-                        content="Dear {{pa_assistant}},"
-                                "\r\n\r\nKindly draft my Travel Authorization in Vision based on the approved trip:"
-                                "\r\n\r\n{{url}}"
-                                "\r\n\r\nThanks,"
-                                "\r\n{{owner_name}}"
-                    )
-                send_mail(
+                emails.TripTAEmail(instance).send(
                     instance.owner.email,
-                    template,
-                    {
-                        'owner_name': instance.owner.get_full_name(),
-                        'pa_assistant': instance.programme_assistant.get_full_name(),
-                        'url': 'http://{}{}'.format(
-                            current_site.domain,
-                            instance.get_admin_url()
-                        )
-                    },
-                    instance.programme_assistant.email,
+                    instance.programme_assistant.email
                 )
 
             if instance.ta_drafted and instance.vision_approver:
-                email_name = 'trips/trip/TA_drafted'
-                try:
-                    template = EmailTemplate.objects.get(
-                        name=email_name
-                    )
-                except EmailTemplate.DoesNotExist:
-                    template = EmailTemplate.objects.create(
-                        name=email_name,
-                        description="This email is sent to the relevant colleague to approve "
-                                    "the TA for the staff in concern after the TA has been drafted in VISION.",
-                        subject="Travel Authorization drafted for {{owner_name}}",
-                        content="Dear {{vision_approver}},"
-                                "\r\n\r\nKindly approve my Travel Authorization ({{ta_ref}}) in VISION based on the approved trip:"
-                                "\r\n\r\n{{url}}"
-                                "\r\n\r\nThanks,"
-                                "\r\n{{owner_name}}"
-                    )
-                send_mail(
-                    instance.owner.email,
-                    template,
-                    {
-                        'owner_name': instance.owner.get_full_name(),
-                        'vision_approver': instance.vision_approver.get_full_name(),
-                        'ta_ref': instance.ta_reference,
-                        'url': 'http://{}{}'.format(
-                            current_site.domain,
-                            instance.get_admin_url()
-                        )
-                    },
-                    instance.vision_approver.email,
+                emails.TripTADraftedEmail(instance).send(
+                    instance.programme_assistant.email,
+                    instance.vision_approver.email
                 )
 
-            # send an email to representative on trip approval to the representative
-            if instance.international_travel and instance.representative and not instance.representative_approval:
-                send_mail(
+            if not instance.approved_email_sent:
+                if instance.international_travel:
+                    recipients.append(instance.representative.email)
+                emails.TripApprovedEmail(instance).send(
                     instance.owner.email,
-                    'trips/trip/created/updated',
-                    {
-                        'owner_name': instance.owner.get_full_name(),
-                        'number': instance.reference(),
-                        'state': state,
-                        'url': 'http://{}{}'.format(
-                            current_site.domain,
-                            instance.get_admin_url()
-                        )
-                    },
-                    instance.representative
+                    *recipients
                 )
+                instance.approved_email_sent = True
+                instance.save()
 
+        elif instance.status == Trip.COMPLETED:
+            emails.TripCompletedEmail(instance).send(
+                instance.owner.email,
+                *recipients
+            )
 
 post_save.connect(Trip.send_trip_request, sender=Trip)
 
@@ -470,75 +340,53 @@ class TravelRoutes(models.Model):
 
 class ActionPoint(models.Model):
 
+    CLOSED = (
+        ('closed', 'Closed'),
+        ('ongoing', 'On-going'),
+        ('open', 'Open'),
+        ('cancelled', 'Cancelled')
+    )
+
     trip = models.ForeignKey(Trip)
     description = models.CharField(max_length=254)
     due_date = models.DateField()
-    persons_responsible = models.ManyToManyField(User)
+    person_responsible = models.ForeignKey(User, related_name='for_action')
+    persons_responsible = models.ManyToManyField(User, blank=True, null=True)
     actions_taken = models.TextField(blank=True, null=True)
     completed_date = models.DateField(blank=True, null=True)
-    comments = models.TextField(blank=True, null=True, verbose_name='Supervisors Comments')
-    closed = models.BooleanField(default=False)
+    comments = models.TextField(blank=True, null=True)
+    status = models.CharField(choices=CLOSED, max_length=254, null=True, verbose_name='Status')
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return self.description
 
     @classmethod
     def send_action(cls, sender, instance, created, **kwargs):
-        current_site = Site.objects.get_current()
+
+        recipients = [
+            user.email
+            for user in
+            instance.persons_responsible.all()
+        ]
+        recipients.append(instance.trip.supervisor.email)
+
         if created:
-            email_name = 'trips/action/created'
-            try:
-                template = EmailTemplate.objects.get(
-                    name=email_name
-                )
-            except EmailTemplate.DoesNotExist:
-                template = EmailTemplate.objects.create(
-                    name=email_name,
-                    description='Sent when trip action points are created',
-                    subject='Trip action point created for trip: {{trip_reference}}',
-                    content="A new trip action point has been created "
-                            "and awaits your action here:"
-                            "\r\n\r\n{{url}}"
-                            "\r\n\r\nThank you."
-                )
-            send_mail(
+            emails.TripActionPointCreated(instance).send(
                 instance.trip.owner.email,
-                template,
-                {
-                    'trip_reference': instance.trip.reference(),
-                    'url': 'http://{}{}#reporting'.format(
-                        current_site.domain,
-                        instance.trip.get_admin_url()
-                    )
-                },
-                *[instance.trip.supervisor.email] +
-                [user.email for user in instance.persons_responsible.all()]
+                *recipients
             )
-        if instance.closed:
-            email_name = 'trips/action/closed'
-            try:
-                template = EmailTemplate.objects.get(
-                    name=email_name
-                )
-            except EmailTemplate.DoesNotExist:
-                template = EmailTemplate.objects.create(
-                    name=email_name,
-                    description='Sent when trip action points are closed',
-                    subject='Trip action point closed for trip: {{trip_reference}}',
-                    content="A trip action point has been closed here:"
-                            "\r\n\r\n{{url}}"
-                            "\r\n\r\nThank you."
-                )
-            send_mail(
+        elif instance.status == 'closed':
+            emails.TripActionPointClosed(instance).send(
                 instance.trip.owner.email,
-                template,
-                {
-                    'trip_reference': instance.trip.reference(),
-                    'url': 'http://{}{}#reporting'.format(
-                        current_site.domain,
-                        instance.trip.get_admin_url()
-                    )
-                },
-                *[instance.trip.supervisor.email] +
-                [user.email for user in instance.persons_responsible.all()]
+                *recipients
             )
+        else:
+            emails.TripActionPointUpdated(instance).send(
+                instance.trip.owner.email,
+                *recipients
+            )
+
 
 post_save.connect(ActionPoint.send_action, sender=ActionPoint)
 

@@ -2,6 +2,8 @@ __author__ = 'jcranwellward'
 
 from django.db import models
 
+from paintstore.fields import ColorPickerField
+
 
 class ResultStructure(models.Model):
 
@@ -11,6 +13,14 @@ class ResultStructure(models.Model):
 
     class Meta:
         ordering = ['name']
+
+    def __unicode__(self):
+        return self.name
+
+
+class ResultType(models.Model):
+
+    name = models.CharField(max_length=150)
 
     def __unicode__(self):
         return self.name
@@ -33,6 +43,10 @@ class Sector(models.Model):
         blank=True,
         null=True
     )
+    dashboard = models.BooleanField(
+        default=False
+    )
+    color = ColorPickerField(null=True, blank=True)
 
     class Meta:
         ordering = ['name']
@@ -77,6 +91,26 @@ class Rrp5Output(models.Model):
         return u'({}) {}'.format(self.result_structure, self.name)
 
 
+class Result(models.Model):
+
+    result_structure = models.ForeignKey(ResultStructure)
+    result_type = models.ForeignKey(ResultType)
+    sector = models.ForeignKey(Sector)
+    name = models.CharField(max_length=256L)
+    code = models.CharField(max_length=10, null=True, blank=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __unicode__(self):
+        return u'{} {} {}: {}'.format(
+            self.result_structure.name,
+            self.sector.name,
+            self.result_type.name,
+            self.name
+        )
+
+
 class Goal(models.Model):
 
     result_structure = models.ForeignKey(
@@ -96,6 +130,9 @@ class Goal(models.Model):
 class Unit(models.Model):
     type = models.CharField(max_length=45L, unique=True)
 
+    class Meta:
+        ordering = ['type']
+
     def __unicode__(self):
         return self.type
 
@@ -105,9 +142,15 @@ class Indicator(models.Model):
     sector = models.ForeignKey(Sector)
     result_structure = models.ForeignKey(
         ResultStructure, blank=True, null=True)
+
+    result = models.ForeignKey(Result, blank=True, null=True)
     name = models.CharField(max_length=128L, unique=True)
+    code = models.CharField(max_length=10, null=True, blank=True)
     unit = models.ForeignKey(Unit)
-    total = models.IntegerField(verbose_name='Target')
+    total = models.IntegerField(verbose_name='UNICEF Target')
+    sector_total = models.IntegerField(verbose_name='Sector Target', null=True, blank=True)
+    current = models.IntegerField(null=True, blank=True)
+    sector_current = models.IntegerField(null=True, blank=True)
     view_on_dashboard = models.BooleanField(default=False)
     in_activity_info = models.BooleanField(default=False)
     activity_info_indicators = models.ManyToManyField(
@@ -119,8 +162,7 @@ class Indicator(models.Model):
         ordering = ['name']
 
     def __unicode__(self):
-        return u'({}) {} {}'.format(
-            self.result_structure,
+        return u'{} {}'.format(
             self.name,
             'ActivityInfo' if self.in_activity_info else ''
         )
@@ -143,12 +185,6 @@ class Indicator(models.Model):
 
     def progress(self):
         reported = 0
-        if self.in_activity_info:
-            for report in self.partnerreport_set.all():
-                reported += report.indicator_value
-        else:
-            for progess in self.indicatorprogress_set.all():
-                reported += progess.current
         return reported
 
 

@@ -25,19 +25,34 @@ SUIT_CONFIG = {
 
     'MENU': (
 
-        {'label': 'Dashboard', 'icon': 'icon-dash', 'url': 'dashboard'},
+        {'app': 'auth', 'label': 'Users', 'icon': 'icon-user'},
 
-        {'label': 'PCAs', 'icon': 'icon-pencil', 'models': [
-            {'model': 'partners.pca', 'label': 'List of PCAs'},
+        {'label': 'Dashboard', 'icon': 'icon-dashboard', 'url': 'dashboard'},
+
+        {'label': 'Partnerships', 'icon': 'icon-pencil', 'models': [
+            {'model': 'partners.pca', 'label': 'Partnerships'},
+            {'model': 'partners.assessment', 'label': 'Assessments'},
             {'model': 'partners.partnerorganization', 'label': 'Partners'},
             {'model': 'partners.face', 'label': 'FACE'},
         ]},
 
-        {'app': 'trips', 'icon': 'icon-road'},
+        {'app': 'trips', 'icon': 'icon-road', 'models': [
+            {'model': 'trips.trip'},
+            {'model': 'trips.actionpoint'},
+            {'model': 'trips.office'},
+        ]},
 
         {'app': 'funds', 'icon': 'icon-briefcase'},
 
-        {'label': 'Result Structures', 'app': 'reports', 'icon': 'icon-info-sign'},
+        {'label': 'Result Structures', 'app': 'reports', 'icon': 'icon-info-sign', 'models': [
+            {'model': 'reports.resultstructure'},
+            {'model': 'reports.sector'},
+            {'model': 'reports.result'},
+            {'model': 'reports.indicator'},
+            {'model': 'reports.goal'},
+            {'model': 'reports.intermediateresult'},
+            {'model': 'reports.wbs'},
+        ]},
 
         {'app': 'activityinfo', 'label': 'ActivityInfo'},
 
@@ -45,21 +60,29 @@ SUIT_CONFIG = {
 
         {'app': 'filer', 'label': 'Files', 'icon': 'icon-file'},
 
-        {'app': 'tpm', 'label': 'TPM Portal'},
+        {'app': 'tpm', 'label': 'TPM Portal', 'icon': 'icon-calendar'},
     )
 }
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 AUTH_USER_MODEL = 'auth.User'
+AUTH_PROFILE_MODULE = 'users.UserProfile'
 
-REGISTRATION_OPEN = False
+REGISTRATION_OPEN = True
 ACCOUNT_ACTIVATION_DAYS = 7
+
+########## EMAIL CONFIGURATION
+# See: https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 DEFAULT_FROM_EMAIL = "no-reply@unicef.org"
 POST_OFFICE = {
     'DEFAULT_PRIORITY': 'now'
 }
-
+EMAIL_BACKEND = 'post_office.EmailBackend'
+POST_OFFICE_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+CELERY_EMAIL_BACKEND = "djrill.mail.backends.djrill.DjrillBackend"
+MANDRILL_API_KEY = os.environ.get("MANDRILL_KEY", 'notarealkey')
+########## END EMAIL CONFIGURATION
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
@@ -68,8 +91,12 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication'
     )
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
+
 # Add our project to our pythonpath, this way we don't need to type our project
 # name in our dotted import paths:
 path.append(DJANGO_ROOT)
@@ -89,7 +116,7 @@ if isinstance(DEBUG, str):
 TEMPLATE_DEBUG = DEBUG
 ########## END DEBUG CONFIGURATION
 
-########## DATABASE CONFIGURATION
+########## DATABASE CONFIGURATION #########
 POSTGIS_VERSION = (2, 1)
 import dj_database_url
 DATABASES = {
@@ -98,9 +125,8 @@ DATABASES = {
         default='postgis:///equitrack'
     )
 }
-BROKER_URL = 'redis://localhost:6379/0'
-CELERY_ALWAYS_EAGER = os.environ.get('CELERY_EAGER', True)
-CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
+BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
 CELERY_BEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 ########## END DATABASE CONFIGURATION
 
@@ -140,6 +166,7 @@ USE_TZ = True
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#media-root
 MEDIA_ROOT = normpath(join(BASE_DIR, 'media'))
 
+FILER_ALLOW_REGULAR_USERS_TO_ADD_ROOT_FOLDERS = True
 FILER_STORAGES = {
     'public': {
         'main': {
@@ -272,6 +299,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 )
 ########## END MIDDLEWARE CONFIGURATION
 
@@ -301,6 +330,7 @@ DJANGO_APPS = (
     'django.contrib.admin',
     # 'django.contrib.admindocs',
     'django.contrib.humanize',
+    'mathfilters'
 )
 
 THIRD_PARTY_APPS = (
@@ -319,24 +349,40 @@ THIRD_PARTY_APPS = (
     'post_office',
     'djrill',
     'djcelery',
+    'djcelery_email',
     'datetimewidget',
     'logentry_admin',
     'dbbackup',
+    'leaflet',
+    'djgeojson',
+    'paintstore',
+    'messages_extends',
+    'corsheaders',
 )
 
 # Apps specific for this project go here.
 LOCAL_APPS = (
-    'tpm',
     'funds',
     'locations',
+    'activityinfo',
     'reports',
     'partners',
-    'activityinfo',
-    'emails',
     'trips',
     'users',
     'registration',
+    'tpm',
 )
+
+MESSAGE_STORAGE = 'messages_extends.storages.FallbackStorage'
+
+LEAFLET_CONFIG = {
+    'TILES':  'http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg',
+    'ATTRIBUTION_PREFIX': 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">',
+    'DEFAULT_CENTER': (os.environ.get('MAP_LAT', 33.9), os.environ.get('MAP_LONG', 36)),
+    'DEFAULT_ZOOM': int(os.environ.get('MAP_ZOOM', 9)),
+    'MIN_ZOOM': 3,
+    'MAX_ZOOM': 18,
+}
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

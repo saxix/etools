@@ -6,7 +6,6 @@ from import_export.admin import ImportExportModelAdmin
 
 from EquiTrack.utils import get_changeform_link
 from partners.models import IndicatorProgress
-from activityinfo.models import PartnerReport
 from reports.models import (
     Sector,
     WBS,
@@ -17,7 +16,9 @@ from reports.models import (
     Rrp5Output,
     RRPObjective,
     IntermediateResult,
-    ResultStructure
+    ResultStructure,
+    ResultType,
+    Result
 )
 
 
@@ -52,36 +53,15 @@ class SectorListFilter(admin.SimpleListFilter):
         return queryset
 
 
+class SectorAdmin(ImportExportModelAdmin):
+    list_display = ('name', 'color', 'dashboard',)
+    list_editable = ('color', 'dashboard',)
+
+
 class ResultStructureAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_filter = ('result_structure', SectorListFilter,)
     list_display = ('name', 'sector', 'result_structure',)
-
-
-class PartnerReportInlineAdmin(admin.TabularInline):
-    model = PartnerReport
-    extra = 0
-    fields = (
-        'pca',
-        'indicator',
-        'ai_partner',
-        'ai_indicator',
-        'location',
-        'month',
-        'indicator_value',
-    )
-    readonly_fields = (
-        'pca',
-        'indicator',
-        'ai_partner',
-        'ai_indicator',
-        'location',
-        'month',
-        'indicator_value',
-    )
-
-    def has_add_permission(self, request):
-        return False
 
 
 class IndicatorProgressInlineAdmin(admin.TabularInline):
@@ -148,13 +128,23 @@ class IndicatorAdmin(ImportExportModelAdmin):
     )
     inlines = [
         IndicatorProgressInlineAdmin,
-        PartnerReportInlineAdmin
     ]
 
 
+class ResultAdmin(ImportExportModelAdmin):
+
+    list_filter = (
+        'result_structure',
+        'sector',
+        'result_type'
+    )
+
+
+admin.site.register(Result, ResultAdmin)
+admin.site.register(ResultType)
 admin.site.register(RRPObjective, ImportExportModelAdmin)
 admin.site.register(ResultStructure, ImportExportModelAdmin)
-admin.site.register(Sector, ImportExportModelAdmin)
+admin.site.register(Sector, SectorAdmin)
 admin.site.register(Activity, ImportExportModelAdmin)
 admin.site.register(IntermediateResult, ImportExportModelAdmin)
 admin.site.register(Rrp5Output, ResultStructureAdmin)

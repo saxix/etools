@@ -53,20 +53,5 @@ if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
     DBBACKUP_S3_SECRET_KEY = AWS_SECRET_ACCESS_KEY
 
 
-########## EMAIL CONFIGURATION
-# See: https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-MANDRILL_API_KEY = os.environ.get("MANDRILL_KEY", '')
-POST_OFFICE_BACKEND = "djrill.mail.backends.djrill.DjrillBackend"
-EMAIL_BACKEND = 'post_office.EmailBackend'
-########## END EMAIL CONFIGURATION
-
-
 SECRET_KEY = os.environ.get("SECRET_KEY", SECRET_KEY)
 
-LOGGING['handlers']['loggly'] = {
-      "class": "loggly.handlers.HTTPSHandler",
-      "level": "INFO",
-      "url": "https://logs-01.loggly.com/inputs/b0c67376-f044-4e1e-9140-96dde130ac51/tag/app/",
-      "facility": "equitrack"
-}
-LOGGING['root']['handlers'].append('loggly')

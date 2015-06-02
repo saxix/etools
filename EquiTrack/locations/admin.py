@@ -1,13 +1,13 @@
 __author__ = 'jcranwellward'
 
 from django.contrib.gis import admin
-from django.contrib.auth.models import User
-from django.contrib.auth.admin import UserAdmin
 
 from import_export import resources
 from import_export.admin import ImportExportMixin
+from leaflet.admin import LeafletGeoAdmin
 
 from . import models
+from .forms import CartoDBTableForm
 
 
 class LocationResource(resources.ModelResource):
@@ -16,17 +16,7 @@ class LocationResource(resources.ModelResource):
         model = models.Location
 
 
-class UserResource(resources.ModelResource):
-
-    class Meta:
-        model = User
-
-
-class UserAdminPlus(ImportExportMixin, UserAdmin):
-    resource_class = UserResource
-
-
-class LocationAdmin(ImportExportMixin, admin.GeoModelAdmin):
+class LocationAdmin(ImportExportMixin, LeafletGeoAdmin):
     resource_class = LocationResource
     fields = (
         'name',
@@ -34,6 +24,7 @@ class LocationAdmin(ImportExportMixin, admin.GeoModelAdmin):
         'p_code',
         'point',
         'point_lat_long',
+        'locality',
     )
     list_display = (
         'name',
@@ -42,22 +33,48 @@ class LocationAdmin(ImportExportMixin, admin.GeoModelAdmin):
         'locality',
     )
     readonly_fields = (
+        'point',
         'point_lat_long',
     )
     search_fields = ('name', 'p_code',)
     list_filter = ('gateway', 'locality',)
 
 
-class LocalityAdmin(admin.GeoModelAdmin):
+class GovernorateAdmin(LeafletGeoAdmin):
     list_display = (
         'name',
-        'region',
+        'p_code',
+        'color',
     )
+    list_editable = ['color']
+
+
+class RegionAdmin(LeafletGeoAdmin):
+    list_display = (
+        'name',
+        'p_code',
+        'governorate',
+        'color',
+    )
+    list_editable = ['color']
+    list_filter = ['governorate']
+
+
+class LocalityAdmin(LeafletGeoAdmin):
+    list_display = (
+        'name',
+        'p_code',
+        'region',
+        'color',
+    )
+    list_editable = ['color']
     search_fields = ('name', 'cas_code')
     list_filter = ('region', 'cas_code')
 
 
 class CartoDBTableAdmin(admin.ModelAdmin):
+    form = CartoDBTableForm
+    save_as = True
     list_display = (
         'table_name',
         'location_type',
@@ -79,10 +96,8 @@ class CartoDBTableAdmin(admin.ModelAdmin):
             )
 
 
-admin.site.unregister(User)
-admin.site.register(User, UserAdminPlus)
-admin.site.register(models.Governorate, admin.GeoModelAdmin)
-admin.site.register(models.Region, admin.GeoModelAdmin)
+admin.site.register(models.Governorate, GovernorateAdmin)
+admin.site.register(models.Region, RegionAdmin)
 admin.site.register(models.Locality, LocalityAdmin)
 admin.site.register(models.Location, LocationAdmin)
 admin.site.register(models.GatewayType)

@@ -3,8 +3,7 @@ __author__ = 'jcranwellward'
 import random
 
 import logging
-from django.conf import settings
-from django.core import urlresolvers
+
 from django.db import IntegrityError
 from django.contrib.gis.db import models
 from django.contrib.contenttypes.generic import GenericForeignKey
@@ -12,13 +11,18 @@ from django.contrib.contenttypes.models import ContentType
 
 from cartodb import CartoDBAPIKey, CartoDBException
 from smart_selects.db_fields import ChainedForeignKey
+from paintstore.fields import ColorPickerField
 
 logger = logging.getLogger('locations.models')
 
 
+def get_random_color():
+    r = lambda: random.randint(0,255)
+    return '#%02X%02X%02X' % (r(), r(), r())
+
+
 class GatewayType(models.Model):
     name = models.CharField(max_length=64L, unique=True)
-
     class Meta:
         ordering = ['name']
 
@@ -27,13 +31,14 @@ class GatewayType(models.Model):
 
 
 class Governorate(models.Model):
-    name = models.CharField(max_length=45L, unique=True)
+    name = models.CharField(max_length=45L)
     p_code = models.CharField(max_length=32L, blank=True, null=True)
     gateway = models.ForeignKey(
         GatewayType,
         blank=True, null=True,
         verbose_name='Admin type'
     )
+    color = ColorPickerField(null=True, blank=True, default=lambda: get_random_color())
 
     geom = models.MultiPolygonField(null=True, blank=True)
     objects = models.GeoManager()
@@ -47,13 +52,14 @@ class Governorate(models.Model):
 
 class Region(models.Model):
     governorate = models.ForeignKey(Governorate)
-    name = models.CharField(max_length=45L, unique=True)
+    name = models.CharField(max_length=45L)
     p_code = models.CharField(max_length=32L, blank=True, null=True)
     gateway = models.ForeignKey(
         GatewayType,
         blank=True, null=True,
         verbose_name='Admin type'
     )
+    color = ColorPickerField(null=True, blank=True, default=lambda: get_random_color())
 
     geom = models.MultiPolygonField(null=True, blank=True)
     objects = models.GeoManager()
@@ -79,6 +85,7 @@ class Locality(models.Model):
         blank=True, null=True,
         verbose_name='Admin type'
     )
+    color = ColorPickerField(null=True, blank=True, default=lambda: get_random_color())
 
 
     geom = models.MultiPolygonField(null=True, blank=True)
@@ -145,6 +152,7 @@ class LinkedLocation(models.Model):
         chained_model_field="region",
         show_all=False,
         auto_choose=True,
+        null=True, blank=True
     )
     location = ChainedForeignKey(
         Location,
@@ -160,11 +168,15 @@ class LinkedLocation(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
 
     def __unicode__(self):
-        desc = u'{} -> {} -> {}'.format(
+        desc = u'{} -> {}'.format(
             self.governorate.name,
             self.region.name,
-            self.locality.name,
         )
+        if self.locality:
+            desc = u'{} -> {}'.format(
+                desc,
+                self.locality.name
+            )
         if self.location:
             desc = u'{} -> {} ({})'.format(
                 desc,
@@ -180,10 +192,15 @@ class CartoDBTable(models.Model):
     domain = models.CharField(max_length=254)
     api_key = models.CharField(max_length=254)
     table_name = models.CharField(max_length=254)
+    display_name = models.CharField(max_length=254, null=True, blank=True)
     location_type = models.ForeignKey(GatewayType)
     name_col = models.CharField(max_length=254, default='name')
     pcode_col = models.CharField(max_length=254, default='pcode')
     parent_code_col = models.CharField(max_length=254, null=True, blank=True)
+    color = ColorPickerField(null=True, blank=True, default=lambda: get_random_color())
+
+    def __unicode__(self):
+        return self.table_name
 
     def update_sites_from_cartodb(self):
 
@@ -208,7 +225,7 @@ class CartoDBTable(models.Model):
                 parent, level = Locality, Location
 
             for row in sites['rows']:
-                pcode = row[self.pcode_col]
+                pcode = str(row[self.pcode_col]).strip()
                 site_name = row[self.name_col].encode('UTF-8')
 
                 if not site_name or site_name.isspace():
@@ -216,6 +233,8 @@ class CartoDBTable(models.Model):
                     sites_not_added += 1
                     continue
 
+                parent_code = None
+                parent_instance = None
                 if self.parent_code_col and parent:
                     try:
                         parent_code = row[self.parent_code_col]
@@ -234,7 +253,7 @@ class CartoDBTable(models.Model):
                         'p_code': pcode,
                         'gateway': self.location_type
                     }
-                    if parent:
+                    if parent and parent_instance:
                         create_args[parent.__name__.lower()] = parent_instance
                     location, created = level.objects.get_or_create(**create_args)
                 except level.MultipleObjectsReturned:

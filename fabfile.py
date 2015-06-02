@@ -202,6 +202,7 @@ def build_image_with_packer(from_image, to_image='', tag='latest', packer_file='
     ))
 
 
+@_setup
 def docker_ps(all=False):
     run('docker ps {}'.format('-a' if all else ''))
 
@@ -301,7 +302,12 @@ def link_db():
 def migrate_db(backup=True):
     if backup:
         run('dokku postgis:dump {} > /home/dokku/{}/backup.sql'.format(env.name, env.name))
-    run('dokku run {} python EquiTrack/manage.py syncdb --migrate'.format(env.name))
+    run('dokku run {} ./EquiTrack/manage.py syncdb --migrate'.format(env.name))
+
+
+@_setup
+def delete_ghost_migrations():
+    run('dokku run {} python EquiTrack/manage.py migrate --delete-ghost-migrations --merge'.format(env.name))
 
 
 @_setup
@@ -320,6 +326,7 @@ def create():
             app=env.name, host=env.host
         ))
     deploy_app()
+    set_env_vars()
     create_db()
     migrate_db()
 
@@ -341,7 +348,5 @@ def deploy_app(migrate=False):
     ))
     if migrate:
         migrate_db()
-    clean_containers()
-    clean_images()
 
 
