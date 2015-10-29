@@ -148,6 +148,25 @@ class TripDetailsView(RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = 'trip'
     queryset = Trip.objects.all()
 
+# from django_fsm import can_proceed
+#
+# class TripNewActionView(GenericAPIView):
+#     model = Trip
+#     serializer_class = TripSerializer
+#
+#     lookup_url_kwarg = 'trip'
+#     queryset = Trip.objects.all()
+#
+#     def post(self, request, *args, **kwargs):
+#         action = kwargs.get('action', False)
+#         current_user = self.request.user
+#         trip = self.get_object()
+#
+#         if not can_proceed(trip.approve_trip):
+#             raise ParseError(detail="cannot proceeed")
+#         else:
+#             raise ParseError(detail="passed")
+#
 
 class TripActionView(GenericAPIView):
 

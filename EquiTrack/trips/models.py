@@ -6,6 +6,8 @@ from django.db import models
 from django.db.models import Q
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+
+#from django_fsm import FSMField, transition
 from smart_selects.db_fields import ChainedForeignKey
 from django.contrib.contenttypes.generic import (
     GenericForeignKey, GenericRelation
@@ -71,6 +73,10 @@ class Trip(AdminURLMixin, models.Model):
         choices=TRIP_STATUS,
         default=PLANNED,
     )
+    # status_fsm = FSMField(
+    #     default=PLANNED,
+    #     choices=TRIP_STATUS
+    # )
     cancelled_reason = models.CharField(
         max_length=254,
         blank=True, null=True,
@@ -216,6 +222,16 @@ class Trip(AdminURLMixin, models.Model):
     def outstanding_actions(self):
         return self.actionpoint_set.filter(
             status='open').count()
+
+    # @transition(
+    #     field=status_fsm,
+    #     source=SUBMITTED,
+    #     target=APPROVED,
+    # )
+    # def approve_trip(self):
+    #     pass
+
+
 
     @property
     def trip_revision(self):
