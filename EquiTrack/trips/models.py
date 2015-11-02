@@ -7,7 +7,8 @@ from django.db.models import Q
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
-#from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition
+
 from smart_selects.db_fields import ChainedForeignKey
 from django.contrib.contenttypes.generic import (
     GenericForeignKey, GenericRelation
@@ -73,10 +74,10 @@ class Trip(AdminURLMixin, models.Model):
         choices=TRIP_STATUS,
         default=PLANNED,
     )
-    # status_fsm = FSMField(
-    #     default=PLANNED,
-    #     choices=TRIP_STATUS
-    # )
+    status_fsm = FSMField(
+        default=PLANNED,
+        choices=TRIP_STATUS
+    )
     cancelled_reason = models.CharField(
         max_length=254,
         blank=True, null=True,
@@ -223,13 +224,9 @@ class Trip(AdminURLMixin, models.Model):
         return self.actionpoint_set.filter(
             status='open').count()
 
-    # @transition(
-    #     field=status_fsm,
-    #     source=SUBMITTED,
-    #     target=APPROVED,
-    # )
-    # def approve_trip(self):
-    #     pass
+
+
+
 
 
 
@@ -253,7 +250,7 @@ class Trip(AdminURLMixin, models.Model):
     def requires_rep_approval(self):
         return self.international_travel
 
-    @property
+    #@property
     def can_be_approved(self):
         if self.status != Trip.SUBMITTED:
             return False
@@ -267,8 +264,24 @@ class Trip(AdminURLMixin, models.Model):
             return False
         return True
 
+    def has_approval_permission(self, user):
+        return user in [self.supervisor, self.travel_assistant, self.budget_owner]
+
+    @transition(
+        field=status_fsm,
+        source=SUBMITTED,
+        target=APPROVED,
+        permission=has_approval_permission,
+        #conditions=[can_be_approved]
+    )
+    def approve_trip(self, *args):
+        print args
+        pass
+
+
     def save(self, **kwargs):
         # check if trip can be approved
+
         if self.can_be_approved:
             self.approved_date = datetime.date.today()
             self.status = Trip.APPROVED
