@@ -169,10 +169,12 @@ class TripNewActionView(GenericAPIView):
         action = kwargs.get('action', False)
         current_user = self.request.user
         trip = self.get_object()
+        trip.cancelled_reason = "asds"
+        print trip.cancelled_reason
 
-        if not can_proceed(trip.approve_trip, "ad"):
+        if not can_proceed(trip.transition_to_approved):
             raise ParseError(detail="cannot proceeed")
-        elif not has_transition_perm(trip.approve_trip, current_user):
+        elif not has_transition_perm(trip.transition_to_approved, current_user):
             raise ParseError(detail="no permission")
         else:
             raise ParseError(detail="passed")

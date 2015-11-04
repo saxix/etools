@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Q
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.utils.functional import cached_property
 
 from django_fsm import FSMField, transition
 
@@ -69,15 +70,15 @@ class Trip(AdminURLMixin, models.Model):
         (STAFF_ENTITLEMENT, u"STAFF ENTITLEMENT"),
     )
 
-    status = models.CharField(
+    status = FSMField(
         max_length=32L,
         choices=TRIP_STATUS,
         default=PLANNED,
     )
-    status_fsm = FSMField(
-        default=PLANNED,
-        choices=TRIP_STATUS
-    )
+    # status_fsm = FSMField(
+    #     default=PLANNED,
+    #     choices=TRIP_STATUS
+    # )
     cancelled_reason = models.CharField(
         max_length=254,
         blank=True, null=True,
@@ -225,11 +226,6 @@ class Trip(AdminURLMixin, models.Model):
             status='open').count()
 
 
-
-
-
-
-
     @property
     def trip_revision(self):
         return reversion.get_for_object(self).count()
@@ -250,7 +246,7 @@ class Trip(AdminURLMixin, models.Model):
     def requires_rep_approval(self):
         return self.international_travel
 
-    #@property
+    @property
     def can_be_approved(self):
         if self.status != Trip.SUBMITTED:
             return False
@@ -267,17 +263,64 @@ class Trip(AdminURLMixin, models.Model):
     def has_approval_permission(self, user):
         return user in [self.supervisor, self.travel_assistant, self.budget_owner]
 
+    def can_modify(self, user):
+        return user in [self.owner, self.supervisor, self.travel_assistant, self.budget_owner]
+
+    def transition_to_approved_valid(self):
+        if not self.approved_by_supervisor:
+            return False
+
+        if self.ta_drafted:
+            if (not self.vision_approver or
+                    not self.programme_assistant):
+                return False
+        if (self.requires_hr_approval and
+                not self.approved_by_human_resources):
+            return False
+        if (self.requires_rep_approval and
+                not self.representative_approval):
+            return False
+
+        return True
+
+    def trip_not_canceled(self):
+        return not self.cancelled_reason
+
+    def get_transition(self, data):
+        if (not data.get('status') in [s[0] for s in self.TRIP_STATUS] or
+                data.get('status') == self.status):
+            return False
+        else:
+            try:
+                return getattr(self, 'transition_to_'+data.get('status'))
+            except AttributeError as e:
+                return False
+
     @transition(
-        field=status_fsm,
+        field=status,
         source=SUBMITTED,
         target=APPROVED,
-        permission=has_approval_permission,
-        #conditions=[can_be_approved]
+        permission=can_modify,
+        conditions=[transition_to_approved_valid, trip_not_canceled]
     )
-    def approve_trip(self, *args):
-        print args
+    def transition_to_approved(self, *args, **kwargs):
         pass
 
+    def submitted_date_check(self):
+        if self.to_date < datetime.datetime.date(datetime.datetime.now()):
+            return False
+        return True
+
+
+    @transition(
+        field=status,
+        source=PLANNED,
+        target=SUBMITTED,
+        permission=can_modify,
+        conditions=[submitted_date_check]
+    )
+    def transition_to_submitted(self, *args, **kwargs):
+        pass
 
     def save(self, **kwargs):
         # check if trip can be approved
