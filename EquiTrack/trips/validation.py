@@ -1,17 +1,21 @@
 #  __author__ = 'Robi'
 
+import datetime
 
-#from . import models
+
 from django.utils.functional import cached_property
 
+from django_fsm import can_proceed
+
 from . import errors
-from .models import Trip
+
+
 class SimpleObject(object):
     pass
 
 
-class TripValidation(object):
-    def __init__(self, data=None, instance=None, user=None):
+class TripValidationMixin(object):
+    def __init__(self, data=None, *args, **kwargs):
         """
         :param data: a dictionary with all the fields meant to be changed
         :param instance: the instance that is meant to be changed
@@ -19,8 +23,12 @@ class TripValidation(object):
 
         either data or instance is required.
         """
-        self.trip = instance
+        self.trip = self
+
+    def set_data(self, data):
         self.data = data
+
+    def set_user(self, user):
         self.user = user
 
     def get_field(self, field_name):
@@ -30,7 +38,7 @@ class TripValidation(object):
             if field_name in self.data:
                 field = self.data.get(field_name)
             elif self.trip:
-                field = getattr(self.trip, field_name)
+                field = getattr(self.trip, field_name, None)
         elif self.trip:
             field = getattr(self.trip, field_name)
         else:
@@ -71,7 +79,7 @@ class TripValidation(object):
         needed_fields = [u'pcas', u'travel_type']
         t = self.get_validator_object(needed_fields)
 
-        if not t.pcas and t.travel_type == Trip.PROGRAMME_MONITORING:
+        if not t.pcas and t.travel_type == self.PROGRAMME_MONITORING:
             return False, errors.trip['travel_type_valid']
 
         return True, False
@@ -114,7 +122,7 @@ class TripValidation(object):
         needed_fields = [u'status']
         t = self.get_validator_object(needed_fields)
 
-        if t.status == Trip.PLANNED:
+        if t.status == self.PLANNED:
             return True, None
 
         return False, errors.trip['trip_is_planned']
@@ -128,6 +136,28 @@ class TripValidation(object):
         if t.approved_by_budget_owner and not t.date_budget_owner_approved:
             return False, errors.trip['approved_by_budget_owner_valid']
 
+        return True, None
+
+    @cached_property
+    def status_cancelled_valid(self):
+        needed_fields = [u'cancelled_reason']
+        t = self.get_validator_object(needed_fields)
+
+        if not t.cancelled_reason:
+            return False, errors.trip['status_cancelled_valid']
+        return True, None
+
+    @cached_property
+    def status_planned_valid(self):
+
+        rigid_fields = [u'approved_by_supervisor', u'approved_by_budget_owner', u'date_human_resources_approved',
+                        u'representative_approval', u'date_representative_approved']
+
+        # note the ManyToMany related fields require a different approach
+        for field in rigid_fields:
+            print self.data.get(field), getattr(self.trip, field)
+            if self.data.get(field) != getattr(self.trip, field):
+                return False, errors.trip['status_planned_valid']+" "+field
         return True, None
 
     @cached_property
@@ -147,7 +177,8 @@ class TripValidation(object):
 
     @cached_property
     def status_submitted_valid(self):
-        return False, "asdasda"
+        # TODO: MAKE SURE TO IMPLEMENT THIS
+        return True, None
 
     @cached_property
     def current_state_is_valid(self):
@@ -157,3 +188,102 @@ class TripValidation(object):
             status = self.trip.status
 
         return getattr(self, "status_"+status+"_valid")
+
+    @cached_property
+    def transition_to_submitted_valid(self):
+        if self.trip.to_date < datetime.datetime.date(datetime.datetime.now()):
+            return False
+        return True
+
+    @cached_property
+    def transition_to_cancelled_valid(self):
+        if self.trip.cancelled_reason:
+            return True
+        return False
+
+    @cached_property
+    def transition_to_approved_valid(self):
+
+        if not self.trip.approved_by_supervisor:
+            return False
+        if self.trip.ta_drafted:
+            if (not self.trip.vision_approver or
+                    not self.trip.programme_assistant):
+                return False
+        if (self.trip.requires_hr_approval and
+                not self.trip.approved_by_human_resources):
+            return False
+        if (self.trip.requires_rep_approval and
+                not self.trip.representative_approval):
+            return False
+        if self.trip.cancelled_reason:
+            return False
+        return True
+
+    @cached_property
+    def basic_validation(self):
+        """
+            This ensures that all fields are valid in a very general sense, applicable to all states
+        """
+        my_errors = []
+        if not self.trip_dates_valid[0]:
+            my_errors.append(self.trip_dates_valid[1])
+
+        if not self.not_self_supervised[0]:
+            my_errors.append(self.not_self_supervised[1])
+
+        if not self.travel_type_valid[0]:
+            my_errors.append(self.travel_type_valid[1])
+
+        if not self.ta_required_valid[0]:
+            my_errors.append(self.ta_required_valid[1])
+
+        if not self.international_travel_valid[0]:
+            raise my_errors.append(self.international_travel_valid[1])
+
+        if my_errors:
+            return False, my_errors
+        return True, None
+
+    @cached_property
+    def transitional_validation(self):
+        """
+            This ensures that if there is a transition required (a status change) that transition can be satisfied
+        :return:
+        """
+        return True, None
+
+    @cached_property
+    def new_object_is_valid(self):
+        """
+            This ensures that if there is a transition required (a status change) that transition can be satisfied
+        :return:
+        """
+        my_errors = []
+        if not self.basic_validation[0]:
+            my_errors.append(self.basic_validation[1])
+
+        if not self.trip_is_planned[0]:
+            my_errors.append(self.trip_is_planned[1])
+
+        if my_errors:
+            return False, my_errors
+        return True, None
+
+    @cached_property
+    def update_is_valid(self):
+        if not self.basic_validation[0]:
+            return False, self.basic_validation[1]
+        if not self.transitional_validation[0]:
+            return False, self.transitional_validation[1]
+        return True, None
+
+    def make_auto_transitions(self):
+        for possible_transition in self.AUTO_TRANSITIONS_ALLOWED:
+            if self.trip.status in possible_transition['FROM']:
+                for transition_status in possible_transition['TO']:
+                    my_transition = self.trip.get_transition({'status': transition_status})
+                    if my_transition and can_proceed(my_transition):
+                        self.make_auto_transition_updates(transition_status)
+                        return True
+        return False

@@ -26,6 +26,8 @@ from funds.models import Grant
 from users.models import Office, Section
 from locations.models import Governorate, Locality, Location, Region
 from . import emails
+from .validation import TripValidationMixin
+
 
 BOOL_CHOICES = (
     (None, "N/A"),
@@ -34,7 +36,7 @@ BOOL_CHOICES = (
 )
 
 
-class Trip(AdminURLMixin, models.Model):
+class Trip(AdminURLMixin, models.Model, TripValidationMixin):
 
     PLANNED = u'planned'
     SUBMITTED = u'submitted'
@@ -48,6 +50,11 @@ class Trip(AdminURLMixin, models.Model):
         (COMPLETED, u"Completed"),
         (CANCELLED, u"Cancelled"),
     )
+    # transitions that are checked if possible (and applied) at save time
+    AUTO_TRANSITIONS_ALLOWED = [
+        {'FROM': [SUBMITTED], 'TO': [APPROVED, CANCELLED]},
+        {'FROM': [APPROVED], 'TO': [COMPLETED, CANCELLED]},
+    ]
 
     PROGRAMME_MONITORING = u'programme_monitoring'
     SPOT_CHECK = u'spot_check'
@@ -75,10 +82,7 @@ class Trip(AdminURLMixin, models.Model):
         choices=TRIP_STATUS,
         default=PLANNED,
     )
-    # status_fsm = FSMField(
-    #     default=PLANNED,
-    #     choices=TRIP_STATUS
-    # )
+
     cancelled_reason = models.CharField(
         max_length=254,
         blank=True, null=True,
@@ -213,6 +217,11 @@ class Trip(AdminURLMixin, models.Model):
             self.purpose_of_travel
         )
 
+
+    @cached_property
+    def validator(self, data=None, *args, **kwargs):
+        return super(models.Model, self)
+
     def reference(self):
         return '{}/{}-{}'.format(
             self.created_date.year,
@@ -246,45 +255,38 @@ class Trip(AdminURLMixin, models.Model):
     def requires_rep_approval(self):
         return self.international_travel
 
-    @property
-    def can_be_approved(self):
-        if self.status != Trip.SUBMITTED:
-            return False
-        if not self.approved_by_supervisor:
-            return False
-        if self.requires_hr_approval\
-        and not self.approved_by_human_resources:
-            return False
-        if self.requires_rep_approval\
-        and not self.representative_approval:
-            return False
-        return True
+    # @property
+    # def can_be_approved(self):
+    #     if self.status != Trip.SUBMITTED:
+    #         return False
+    #     if not self.approved_by_supervisor:
+    #         return False
+    #     if self.requires_hr_approval\
+    #     and not self.approved_by_human_resources:
+    #         return False
+    #     if self.requires_rep_approval\
+    #     and not self.representative_approval:
+    #         return False
+    #     return True
 
-    def has_approval_permission(self, user):
+    def user_has_approval_permission(self, user):
+        # here we would check if the user has the specific permissions as well
+        # if not user.has_perm(mypermission)
+        #   return False
         return user in [self.supervisor, self.travel_assistant, self.budget_owner]
 
-    def can_modify(self, user):
+    def user_can_modify(self, user):
         return user in [self.owner, self.supervisor, self.travel_assistant, self.budget_owner]
 
-    def transition_to_approved_valid(self):
-        if not self.approved_by_supervisor:
-            return False
+    def valid_transition_to_approved(self):
+        return self.validator.transition_to_approved_valid
 
-        if self.ta_drafted:
-            if (not self.vision_approver or
-                    not self.programme_assistant):
-                return False
-        if (self.requires_hr_approval and
-                not self.approved_by_human_resources):
-            return False
-        if (self.requires_rep_approval and
-                not self.representative_approval):
-            return False
+    def valid_transition_to_submitted(self):
+        return self.trip.transition_to_submitted_valid
 
-        return True
+    def valid_transition_to_cancelled(self):
+        return self.trip.transition_to_cancelled_valid
 
-    def trip_not_canceled(self):
-        return not self.cancelled_reason
 
     def get_transition(self, data):
         if (not data.get('status') in [s[0] for s in self.TRIP_STATUS] or
@@ -300,37 +302,44 @@ class Trip(AdminURLMixin, models.Model):
         field=status,
         source=SUBMITTED,
         target=APPROVED,
-        permission=can_modify,
-        conditions=[transition_to_approved_valid, trip_not_canceled]
+        permission=user_can_modify,  #user_can_approve
+        conditions=[valid_transition_to_approved]
     )
     def transition_to_approved(self, *args, **kwargs):
         pass
 
-    def submitted_date_check(self):
-        if self.to_date < datetime.datetime.date(datetime.datetime.now()):
-            return False
-        return True
-
 
     @transition(
         field=status,
-        source=PLANNED,
+        source=[PLANNED, APPROVED],
         target=SUBMITTED,
-        permission=can_modify,
-        conditions=[submitted_date_check]
+        permission=user_can_modify,
+        conditions=[valid_transition_to_submitted]
     )
     def transition_to_submitted(self, *args, **kwargs):
         pass
 
-    def save(self, **kwargs):
-        # check if trip can be approved
+    @transition(
+        field=status,
+        source=[PLANNED, APPROVED],
+        target=CANCELLED,
+        permission=user_can_modify,
+        conditions=[valid_transition_to_cancelled]
+    )
+    def transition_to_cancelled(self, *args, **kwargs):
+        pass
 
-        if self.can_be_approved:
+
+    def make_auto_transition_updates(self, status):
+        if status == self.APPROVED:
             self.approved_date = datetime.date.today()
             self.status = Trip.APPROVED
-
-        if self.status is not Trip.CANCELLED and self.cancelled_reason:
+        if status == self.CANCELLED:
             self.status = Trip.CANCELLED
+
+    def save(self, **kwargs):
+        # check if trip can be approved
+        self.validator.make_auto_transitions()
 
         super(Trip, self).save(**kwargs)
 

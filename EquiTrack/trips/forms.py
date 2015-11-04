@@ -14,7 +14,7 @@ from datetimewidget.widgets import DateTimeWidget, DateWidget
 
 from partners.models import PCA
 from .models import Trip, TravelRoutes, TripLocation
-from .validation import TripValidation
+
 
 class TravelRoutesForm(ModelForm):
 
@@ -80,52 +80,22 @@ class TripForm(ModelForm):
         cleaned_data = super(TripForm, self).clean()
         status = cleaned_data.get(u'status')
         travel_type = cleaned_data.get(u'travel_type')
-        #from_date = cleaned_data.get(u'from_date')
-        to_date = cleaned_data.get(u'to_date')
-        owner = cleaned_data.get(u'owner')
-        supervisor = cleaned_data.get(u'supervisor')
-        budget_owner = cleaned_data.get(u'budget_owner')
         ta_required = cleaned_data.get(u'ta_required')
-        pcas = cleaned_data.get(u'pcas')
-        no_pca = cleaned_data.get(u'no_pca')
-        international_travel = cleaned_data.get(u'international_travel')
-        representative = cleaned_data.get(u'representative')
-        ta_drafted = cleaned_data.get(u'ta_drafted')
-        vision_approver = cleaned_data.get(u'vision_approver')
         programme_assistant = cleaned_data.get(u'programme_assistant')
-        approved_by_supervisor = cleaned_data.get(u'approved_by_supervisor')
-        date_supervisor_approved = cleaned_data.get(u'date_supervisor_approved')
-        approved_by_budget_owner = cleaned_data.get(u'approved_by_budget_owner')
-        date_budget_owner_approved = cleaned_data.get(u'date_budget_owner_approved')
-        approved_by_human_resources = cleaned_data.get(u'approved_by_human_resources')
         trip_report = cleaned_data.get(u'main_observations')
         ta_trip_took_place_as_planned = cleaned_data.get(u'ta_trip_took_place_as_planned')
 
-        print "here comes the instance:"
-        print self.instance.id
+        validator = self.instance.validator
+        validator.set_data(cleaned_data)
 
-        validator = TripValidation(data=cleaned_data, instance=self.instance)
-
-        if not validator.trip_dates_valid[0]:
-            raise ValidationError(validator.trip_dates_valid[1])
-
-        if not validator.not_self_supervised[0]:
-            raise ValidationError(validator.self_supervised[1])
-
-        if not validator.travel_type_valid[0]:
-            raise ValidationError(validator.travel_type_valid[1])
-
-        if not validator.ta_required_valid[0]:
-            raise ValidationError(validator.ta_required_valid[1])
-
-        if not validator.international_travel_valid[0]:
-            raise ValidationError(validator.international_travel_valid[1])
+        if not validator.basic_validation[0]:
+            raise ValidationError([ValidationError(err) for err in validator.basic_validation[1]])
 
         if not self.instance.id:
             # this means that this is the point of creation
             # one validation is that it needs to be with status "planned"
-            if not validator.trip_is_planned[0]:
-                raise ValidationError(validator.trip_is_planned[1])
+            if not validator.new_object_is_valid[0]:
+                raise ValidationError([ValidationError(err) for err in validator.new_object_is_valid[1]])
 
         else:
             # From here the following trips need to be existing instances
@@ -154,34 +124,10 @@ class TripForm(ModelForm):
                         self.instance.approved_date = datetime.date.today()
 
             else:
-                #if validator.auto_transition_possible[0]:
-                #    cleaned_data = validator.auto_transition_possible[1]
-                #elif validator.current_state_is_valid[0]:
-                #    raise ValidationError(validator.current_state_is_valid[1])
+                if not validator.current_state_is_valid[0]:
+                    raise ValidationError(validator.current_state_is_valid[1])
                 pass
-        # THIS IS A TRANSITION VALIDATION
-        # if status == Trip.SUBMITTED and to_date < datetime.date(datetime.now()):
-        #     raise ValidationError(
-        #         'This trip\'s dates happened in the past and therefore cannot be submitted'
-        #     )
 
-
-        # THIS IS A TRANSITION VALIDATION
-        # if status == Trip.APPROVED and ta_drafted:
-        #     if not vision_approver:
-        #         raise ValidationError(
-        #             'For TA Drafted trip you must select a Vision Approver'
-        #         )
-        #     if not programme_assistant:
-        #         raise ValidationError(
-        #             'For TA Drafted trip you must select a Staff Responsible for TA'
-        #         )
-
-        # THIS IS A TRANSITION VALIDATION
-        # if status == Trip.APPROVED and not self.instance.approved_by_supervisor:
-        #     raise ValidationError(
-        #         'Only the supervisor can approve this trip'
-        #     )
 
         if status == Trip.COMPLETED:
             if not trip_report and travel_type != Trip.STAFF_ENTITLEMENT:

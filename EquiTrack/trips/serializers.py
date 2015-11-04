@@ -133,6 +133,10 @@ class TripSerializer(serializers.ModelSerializer):
         except KeyError:
             aps_data = []
 
+        instance.validator.set_data(validated_data)
+        if not instance.validator.update_is_valid[0]:
+            raise 'Hell'
+
         for key, value in validated_data.iteritems():
             setattr(instance, key, value)
 
