@@ -87,46 +87,18 @@ class TripForm(ModelForm):
 
         validator = self.instance.validator
         validator.set_data(cleaned_data)
-
-        if not validator.basic_validation[0]:
-            raise ValidationError([ValidationError(err) for err in validator.basic_validation[1]])
+        validator.set_user(self.request.user)
 
         if not self.instance.id:
             # this means that this is the point of creation
-            # one validation is that it needs to be with status "planned"
             if not validator.new_object_is_valid[0]:
                 raise ValidationError([ValidationError(err) for err in validator.new_object_is_valid[1]])
 
         else:
-            # From here the following trips need to be existing instances
-            print "woo hoo instance evaluates as true"
-
             # validation that only happens if a trip has already been instantiated
-            if not validator.valid_supervisor_approved[0]:
-                raise ValidationError(validator.valid_supervisor_approved[1])
+            if not validator.update_is_valid[0]:
+                raise ValidationError([ValidationError(err) for err in validator.update_is_valid[1]])
 
-            if not validator.approved_by_budget_owner_valid[0]:
-                raise ValidationError(validator.approved_by_budget_owner_valid[1])
-
-            trip_transition = self.instance.get_transition(cleaned_data)
-
-            if trip_transition:
-                status = cleaned_data.pop('status')
-                for key, value in cleaned_data.iteritems():
-                    if hasattr(self.instance, key):
-                        setattr(self.instance, key, value)
-
-                if not can_proceed(trip_transition):
-                    raise ValidationError('Cannot transition to {}'.format(status))
-                else:
-                    cleaned_data['status'] = status
-                    if status == Trip.APPROVED:
-                        self.instance.approved_date = datetime.date.today()
-
-            else:
-                if not validator.current_state_is_valid[0]:
-                    raise ValidationError(validator.current_state_is_valid[1])
-                pass
 
 
         if status == Trip.COMPLETED:

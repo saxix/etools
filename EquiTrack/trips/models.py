@@ -278,6 +278,14 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
     def user_can_modify(self, user):
         return user in [self.owner, self.supervisor, self.travel_assistant, self.budget_owner]
 
+    def user_can_complete(self, user):
+        if (self.ta_required and
+                self.ta_trip_took_place_as_planned is False and
+                user != self.programme_assistant):
+            return False
+
+        return user in [self.owner, self.travel_assistant]
+
     def valid_transition_to_approved(self):
         return self.validator.transition_to_approved_valid
 
@@ -286,6 +294,9 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
 
     def valid_transition_to_cancelled(self):
         return self.trip.transition_to_cancelled_valid
+
+    def valid_transition_to_completed(self):
+        return self.trip.transition_to_completed_valid
 
 
     def get_transition(self, data):
@@ -308,7 +319,6 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
     def transition_to_approved(self, *args, **kwargs):
         pass
 
-
     @transition(
         field=status,
         source=[PLANNED, APPROVED],
@@ -327,6 +337,16 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
         conditions=[valid_transition_to_cancelled]
     )
     def transition_to_cancelled(self, *args, **kwargs):
+        pass
+
+    @transition(
+        field=status,
+        source=[APPROVED],
+        target=COMPLETED,
+        permission=user_can_complete,
+        conditions=[valid_transition_to_completed]
+    )
+    def transition_to_completed(self, *args, **kwargs):
         pass
 
 

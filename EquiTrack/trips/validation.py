@@ -5,7 +5,7 @@ import datetime
 
 from django.utils.functional import cached_property
 
-from django_fsm import can_proceed
+from django_fsm import can_proceed, has_transition_perm
 
 from . import errors
 
@@ -15,15 +15,23 @@ class SimpleObject(object):
 
 
 class TripValidationMixin(object):
-    def __init__(self, data=None, *args, **kwargs):
-        """
-        :param data: a dictionary with all the fields meant to be changed
-        :param instance: the instance that is meant to be changed
-        :param user: the user that is performing the change
+    """
+        Mixin that handles the validation.
 
-        either data or instance is required.
-        """
+        Whenever the object gets instantiated, before validation make sure to call the
+        set_data(your_data) and the set_user(request.user) functions
+
+
+
+        Important functions:
+
+    """
+    def __init__(self, *args, **kwargs):
+
         self.trip = self
+        self.data = {}
+        self.user = None
+        self.transition_errors = []
 
     def set_data(self, data):
         self.data = data
@@ -38,7 +46,10 @@ class TripValidationMixin(object):
             if field_name in self.data:
                 field = self.data.get(field_name)
             elif self.trip:
-                field = getattr(self.trip, field_name, None)
+                try:
+                    field = getattr(self.trip, field_name, None)
+                except Exception as e:
+                    field = None
         elif self.trip:
             field = getattr(self.trip, field_name)
         else:
@@ -51,6 +62,16 @@ class TripValidationMixin(object):
         for field in needed_fields:
             setattr(t, field, self.get_field(field))
         return t
+
+    def make_auto_transitions(self):
+        for possible_transition in self.AUTO_TRANSITIONS_ALLOWED:
+            if self.trip.status in possible_transition['FROM']:
+                for transition_status in possible_transition['TO']:
+                    my_transition = self.trip.get_transition({'status': transition_status})
+                    if my_transition and can_proceed(my_transition):
+                        self.make_auto_transition_updates(transition_status)
+                        return True
+        return False
 
     @cached_property
     def trip_dates_valid(self):
@@ -155,7 +176,6 @@ class TripValidationMixin(object):
 
         # note the ManyToMany related fields require a different approach
         for field in rigid_fields:
-            print self.data.get(field), getattr(self.trip, field)
             if self.data.get(field) != getattr(self.trip, field):
                 return False, errors.trip['status_planned_valid']+" "+field
         return True, None
@@ -177,6 +197,23 @@ class TripValidationMixin(object):
 
     @cached_property
     def status_submitted_valid(self):
+        if not self.valid_supervisor_approved[0]:
+            return False, self.valid_supervisor_approved[1]
+
+        if not self.approved_by_budget_owner_valid[0]:
+            return False, self.approved_by_budget_owner_valid[1]
+
+        rigid_fields = []
+
+        # note the ManyToMany related fields require a different approach
+        for field in rigid_fields:
+            print self.data.get(field), getattr(self.trip, field)
+            if self.data.get(field) != getattr(self.trip, field):
+                return False, errors.trip['status_submitted_valid']+" "+field
+        return True, None
+
+    @cached_property
+    def status_completed_valid(self):
         # TODO: MAKE SURE TO IMPLEMENT THIS
         return True, None
 
@@ -192,6 +229,8 @@ class TripValidationMixin(object):
     @cached_property
     def transition_to_submitted_valid(self):
         if self.trip.to_date < datetime.datetime.date(datetime.datetime.now()):
+            # TODO: move this error in the errors file
+            self.transition_errors.append(errors.trip['trip_ends_before_now'])
             return False
         return True
 
@@ -202,13 +241,32 @@ class TripValidationMixin(object):
         return False
 
     @cached_property
+    def transition_to_completed_valid(self):
+        if self.trip.cancelled_reason:
+            return False
+        if (not self.trip.main_observations and
+                self.travel_type != self.trip.STAFF_ENTITLEMENT):
+            self.transition_errors.append(errors.trip['trip_report_required'])
+            return False
+        return True
+
+    @cached_property
     def transition_to_approved_valid(self):
 
         if not self.trip.approved_by_supervisor:
+            self.transition_errors.append(errors.trip["not_supervisor_approved"])
             return False
+        if not self.valid_supervisor_approved[0]:
+            self.transition_errors.append(self.valid_supervisor_approved[1])
+            return False
+        if not self.approved_by_budget_owner_valid[0]:
+            self.transition_errors.append(self.approved_by_budget_owner_valid[1])
+            return False
+
         if self.trip.ta_drafted:
             if (not self.trip.vision_approver or
                     not self.trip.programme_assistant):
+                self.transition_errors.append(errors.trip['no_vision_approver'])
                 return False
         if (self.trip.requires_hr_approval and
                 not self.trip.approved_by_human_resources):
@@ -239,7 +297,7 @@ class TripValidationMixin(object):
             my_errors.append(self.ta_required_valid[1])
 
         if not self.international_travel_valid[0]:
-            raise my_errors.append(self.international_travel_valid[1])
+            my_errors.append(self.international_travel_valid[1])
 
         if my_errors:
             return False, my_errors
@@ -249,19 +307,42 @@ class TripValidationMixin(object):
     def transitional_validation(self):
         """
             This ensures that if there is a transition required (a status change) that transition can be satisfied
-        :return:
         """
+        my_errors = []
+        trip_transition = self.trip.get_transition(self.data)
+        if trip_transition:
+            status = self.data.get('status')
+            for key, value in self.data.iteritems():
+                if hasattr(self.trip, key) and key != 'status':
+                    setattr(self.trip, key, value)
+
+            if not can_proceed(trip_transition):
+                # TODO: move this error in the errors file
+                my_errors.append('Cannot transition to {}'.format(status))
+                my_errors.extend(self.transition_errors)
+            elif not has_transition_perm(trip_transition, self.user):
+                # TODO: move this error in the errors file
+                my_errors.append('Cannot transition to {}, User Permission Denied.'.format(status))
+            else:
+                if status == self.trip.APPROVED:
+                    self.trip.approved_date = datetime.date.today()
+        else:
+            print "not good"
+            if not self.current_state_is_valid[0]:
+                my_errors.append(self.current_state_is_valid[1])
+
+        if my_errors:
+            return False, my_errors
         return True, None
 
     @cached_property
     def new_object_is_valid(self):
         """
-            This ensures that if there is a transition required (a status change) that transition can be satisfied
-        :return:
+            This ensures that a new object submission has all the required fields filled correctly
         """
         my_errors = []
         if not self.basic_validation[0]:
-            my_errors.append(self.basic_validation[1])
+            my_errors.extend(self.basic_validation[1])
 
         if not self.trip_is_planned[0]:
             my_errors.append(self.trip_is_planned[1])
@@ -278,12 +359,4 @@ class TripValidationMixin(object):
             return False, self.transitional_validation[1]
         return True, None
 
-    def make_auto_transitions(self):
-        for possible_transition in self.AUTO_TRANSITIONS_ALLOWED:
-            if self.trip.status in possible_transition['FROM']:
-                for transition_status in possible_transition['TO']:
-                    my_transition = self.trip.get_transition({'status': transition_status})
-                    if my_transition and can_proceed(my_transition):
-                        self.make_auto_transition_updates(transition_status)
-                        return True
-        return False
+
