@@ -54,6 +54,7 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
     AUTO_TRANSITIONS_ALLOWED = [
         {'FROM': [SUBMITTED], 'TO': [APPROVED, CANCELLED]},
         {'FROM': [APPROVED], 'TO': [COMPLETED, CANCELLED]},
+        {'FROM': [PLANNED], 'TO': [CANCELLED]},
     ]
 
     PROGRAMME_MONITORING = u'programme_monitoring'
