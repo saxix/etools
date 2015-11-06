@@ -288,16 +288,16 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
         return user in [self.owner, self.travel_assistant]
 
     def valid_transition_to_approved(self):
-        return self.validator.transition_to_approved_valid
+        return self.validator.transition_to_approved_valid()
 
     def valid_transition_to_submitted(self):
-        return self.trip.transition_to_submitted_valid
+        return self.validator.transition_to_submitted_valid()
 
     def valid_transition_to_cancelled(self):
-        return self.trip.transition_to_cancelled_valid
+        return self.validator.transition_to_cancelled_valid()
 
     def valid_transition_to_completed(self):
-        return self.trip.transition_to_completed_valid
+        return self.validator.transition_to_completed_valid()
 
 
     def get_transition(self, data):
@@ -332,7 +332,7 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
 
     @transition(
         field=status,
-        source=[PLANNED, APPROVED],
+        source=[PLANNED, SUBMITTED, APPROVED],
         target=CANCELLED,
         permission=user_can_modify,
         conditions=[valid_transition_to_cancelled]

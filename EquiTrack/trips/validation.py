@@ -226,7 +226,6 @@ class TripValidationMixin(object):
 
         return getattr(self, "status_"+status+"_valid")
 
-    @cached_property
     def transition_to_submitted_valid(self):
         if self.trip.to_date < datetime.datetime.date(datetime.datetime.now()):
             # TODO: move this error in the errors file
@@ -234,13 +233,11 @@ class TripValidationMixin(object):
             return False
         return True
 
-    @cached_property
     def transition_to_cancelled_valid(self):
         if self.trip.cancelled_reason:
             return True
         return False
 
-    @cached_property
     def transition_to_completed_valid(self):
         if self.trip.cancelled_reason:
             return False
@@ -250,7 +247,6 @@ class TripValidationMixin(object):
             return False
         return True
 
-    @cached_property
     def transition_to_approved_valid(self):
 
         if not self.trip.approved_by_supervisor:
