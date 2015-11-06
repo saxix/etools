@@ -5,6 +5,7 @@ __author__ = 'jcranwellward'
 from django.contrib.sites.models import Site
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import Trip, TravelRoutes, TripFunds, ActionPoint, FileAttachment
 
@@ -135,7 +136,7 @@ class TripSerializer(serializers.ModelSerializer):
 
         instance.validator.set_data(validated_data)
         if not instance.validator.update_is_valid[0]:
-            raise 'Hell'
+            raise ValidationError(detail=instance.validator.update_is_valid[1])
 
         for key, value in validated_data.iteritems():
             setattr(instance, key, value)

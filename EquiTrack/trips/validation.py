@@ -198,7 +198,7 @@ class TripValidationMixin(object):
         """
         fields = []
         for field in rigid_fields:
-            if self.data.get(field) != getattr(self.trip, field):
+            if self.get_field(field) != getattr(self.trip, field):
                 fields.append(field)
         return fields
 
@@ -270,6 +270,16 @@ class TripValidationMixin(object):
         if fields:
             return False, errors.trip['status_submitted_valid']+" "+" ".join(fields)
         return True, None
+
+    @property
+    def requires_hr_approval(self):
+        return self.trip.travel_type in [
+            # Trip.STAFF_DEVELOPMENT
+        ]
+
+    @property
+    def requires_rep_approval(self):
+        return self.trip.international_travel
 
     @cached_property
     def status_completed_valid(self):
