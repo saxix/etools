@@ -28,9 +28,17 @@ class TripValidationMixin(object):
     """
     def __init__(self, *args, **kwargs):
 
+        # For readability set the trip
         self.trip = self
+
+        # Data with which we intend to update/instantiate the object
         self.data = {}
+
+        # User that is intending to perform this action
+        # The user is needed for validating updates and transitions
         self.user = None
+
+        # A list of errors that gets populated if a transition is not possible
         self.transition_errors = []
 
     def set_data(self, data):
@@ -40,30 +48,53 @@ class TripValidationMixin(object):
         self.user = user
 
     def get_field(self, field_name):
+        """
+            :param field_name: [string] the name of the field to be returned
+            :return: the value of the coresponding field name
+                    in the self.data or self.trip if it's not present in the data
+                    otherwise None
+        """
         if self.data:
             # this will test if the key is in the data dict
             # if it is and it's set to None or Null it means it's meant to be that
             if field_name in self.data:
                 field = self.data.get(field_name)
             elif self.trip:
+                # try to get the field name from the object
+                # this will throw an exception for ManytoMany fields that don't exist
                 try:
                     field = getattr(self.trip, field_name, None)
                 except Exception as e:
                     field = None
+
         elif self.trip:
-            field = getattr(self.trip, field_name)
+            try:
+                field = getattr(self.trip, field_name)
+            except Exception as e:
+                field = None
         else:
             return None
 
         return field
 
     def get_validator_object(self, needed_fields):
+        """
+            :param needed_fields: [list of strings] intended to be returned as properties on an object
+            :return: an object with the needed fields set as properties and the values the corresponding
+                    values according to get_field()
+        """
+
         t = SimpleObject()
         for field in needed_fields:
             setattr(t, field, self.get_field(field))
         return t
 
     def make_auto_transitions(self):
+        """
+            Function meant to apply any possible transition according
+            to AUTO_TRANSITIONS_ALLOWED set on the model
+        :return: Bool whether an auto transition happened.
+        """
         for possible_transition in self.AUTO_TRANSITIONS_ALLOWED:
             if self.trip.status in possible_transition['FROM']:
                 for transition_status in possible_transition['TO']:
@@ -159,8 +190,25 @@ class TripValidationMixin(object):
 
         return True, None
 
+    def rigid_fields_check(self, rigid_fields):
+        """
+
+            :param rigid_fields: [list strings] all the fields that are not allowed to be changed
+            :return: a list of all of the fields that are changed
+        """
+        fields = []
+        for field in rigid_fields:
+            if self.data.get(field) != getattr(self.trip, field):
+                fields.append(field)
+        return fields
+
     @cached_property
     def status_cancelled_valid(self):
+        """
+            function that checks if the present status fulfills the requirements to stay that way
+            (eg if a status is cancelled, the cancelled reason should not be able to be removed)
+            :return:
+        """
         needed_fields = [u'cancelled_reason']
         t = self.get_validator_object(needed_fields)
 
@@ -170,18 +218,28 @@ class TripValidationMixin(object):
 
     @cached_property
     def status_planned_valid(self):
-
+        """
+            function that checks if the present status fulfills the requirements to stay that way
+            (eg if a status is cancelled, the cancelled reason should not be able to be removed)
+            (eg certain fields should not be able to be changed while still in a particular status)
+            :return:
+        """
         rigid_fields = [u'approved_by_supervisor', u'approved_by_budget_owner', u'date_human_resources_approved',
                         u'representative_approval', u'date_representative_approved']
 
         # note the ManyToMany related fields require a different approach
-        for field in rigid_fields:
-            if self.data.get(field) != getattr(self.trip, field):
-                return False, errors.trip['status_planned_valid']+" "+field
+        fields = self.rigid_fields_check(rigid_fields)
+        if fields:
+            return False, errors.trip['status_planned_valid']+" "+" ".join(fields)
         return True, None
 
     @cached_property
     def status_approved_valid(self):
+        """
+            function that checks if the present status fulfills the requirements to stay that way
+            (eg certain fields should not be able to be changed while still in a particular status)
+            :return:
+        """
         # here goes validation for trip being valid if it stays approved
         # like what are the fields that cannot be changed while status stays approved
         rigid_fields = [u'approved_by_supervisor', u'approved_by_budget_owner', u'international_travel',
@@ -189,14 +247,17 @@ class TripValidationMixin(object):
                         u'purpose_of_travel', u'vision_approver', u'programme_assistant']
 
         # note the ManyToMany related fields require a different approach
-        for field in rigid_fields:
-            print self.data.get(field), getattr(self.trip, field)
-            if self.data.get(field) != getattr(self.trip, field):
-                return False, errors.trip['status_approved_valid']+" "+field
+        fields = self.rigid_fields_check(rigid_fields)
+        if fields:
+            return False, errors.trip['status_approved_valid']+" "+" ".join(fields)
         return True, None
 
     @cached_property
     def status_submitted_valid(self):
+        """
+            function that checks if the present status fulfills the requirements to stay that way
+            :return:
+        """
         if not self.valid_supervisor_approved[0]:
             return False, self.valid_supervisor_approved[1]
 
@@ -205,20 +266,26 @@ class TripValidationMixin(object):
 
         rigid_fields = []
 
-        # note the ManyToMany related fields require a different approach
-        for field in rigid_fields:
-            print self.data.get(field), getattr(self.trip, field)
-            if self.data.get(field) != getattr(self.trip, field):
-                return False, errors.trip['status_submitted_valid']+" "+field
+        fields = self.rigid_fields_check(rigid_fields)
+        if fields:
+            return False, errors.trip['status_submitted_valid']+" "+" ".join(fields)
         return True, None
 
     @cached_property
     def status_completed_valid(self):
         # TODO: MAKE SURE TO IMPLEMENT THIS
+        # Maybe none of the fields should be able to be changed after a trip is completed
         return True, None
 
     @cached_property
     def current_state_is_valid(self):
+        """
+            function that figures out what state the instance is supposed to be in and
+            calls the function that insures that the current status is valid
+            (this function relies on the fact that it won't be called unless there is no
+            transition requested)
+        :return:
+        """
         if "status" in self.data:
             status = self.data['status']
         else:
@@ -227,6 +294,12 @@ class TripValidationMixin(object):
         return getattr(self, "status_"+status+"_valid")
 
     def transition_to_submitted_valid(self):
+        """
+            Function that insures that a particular transition satisfies all the field requirements
+            Note that these checks should not include user permission checks
+        :return:
+            Bool, if the transition can happen safely
+        """
         if self.trip.to_date < datetime.datetime.date(datetime.datetime.now()):
             # TODO: move this error in the errors file
             self.transition_errors.append(errors.trip['trip_ends_before_now'])
@@ -234,11 +307,23 @@ class TripValidationMixin(object):
         return True
 
     def transition_to_cancelled_valid(self):
+        """
+            Function that insures that a particular transition satisfies all the field requirements
+            Note that these checks should not include user permission checks
+        :return:
+            Bool, if the transition can happen safely
+        """
         if self.trip.cancelled_reason:
             return True
         return False
 
     def transition_to_completed_valid(self):
+        """
+            Function that insures that a particular transition satisfies all the field requirements
+            Note that these checks should not include user permission checks
+        :return:
+            Bool, if the transition can happen safely
+        """
         if self.trip.cancelled_reason:
             return False
         if (not self.trip.main_observations and
@@ -248,6 +333,12 @@ class TripValidationMixin(object):
         return True
 
     def transition_to_approved_valid(self):
+        """
+            Function that insures that a particular transition satisfies all the field requirements
+            Note that these checks should not include user permission checks
+        :return:
+            Bool, if the transition can happen safely
+        """
 
         if not self.trip.approved_by_supervisor:
             self.transition_errors.append(errors.trip["not_supervisor_approved"])
@@ -304,16 +395,23 @@ class TripValidationMixin(object):
         """
             This ensures that if there is a transition required (a status change) that transition can be satisfied
         """
+        # List of errors to be returned if any
         my_errors = []
+
+        # get the transition that is required
         trip_transition = self.trip.get_transition(self.data)
         if trip_transition:
             status = self.data.get('status')
+            # since the transition check is performed on the validity of the instance fields,
+            # update the instance with the proposed changes.
+            # (transition checks happen last in this manner therefore it's safe)
             for key, value in self.data.iteritems():
+                # make sure that the proposed status is not set
                 if hasattr(self.trip, key) and key != 'status':
                     setattr(self.trip, key, value)
 
             if not can_proceed(trip_transition):
-                # TODO: move this error in the errors file
+                # TODO: move this error in the errors file and make it more meaningful
                 my_errors.append('Cannot transition to {}'.format(status))
                 my_errors.extend(self.transition_errors)
             elif not has_transition_perm(trip_transition, self.user):
@@ -322,8 +420,10 @@ class TripValidationMixin(object):
             else:
                 if status == self.trip.APPROVED:
                     self.trip.approved_date = datetime.date.today()
+
+        # if no transition is required:
         else:
-            print "not good"
+            # make sure the current state can remain valid
             if not self.current_state_is_valid[0]:
                 my_errors.append(self.current_state_is_valid[1])
 
@@ -335,6 +435,7 @@ class TripValidationMixin(object):
     def new_object_is_valid(self):
         """
             This ensures that a new object submission has all the required fields filled correctly
+            This function calls basic_validation
         """
         my_errors = []
         if not self.basic_validation[0]:
@@ -349,6 +450,11 @@ class TripValidationMixin(object):
 
     @cached_property
     def update_is_valid(self):
+        """
+            Function that insures that the update is valid and any proposed transitions can happen safely
+            This function calls basic_validation and transitional_validation
+        :return:
+        """
         if not self.basic_validation[0]:
             return False, self.basic_validation[1]
         if not self.transitional_validation[0]:

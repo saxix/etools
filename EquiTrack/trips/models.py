@@ -218,9 +218,12 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
             self.purpose_of_travel
         )
 
-
     @cached_property
     def validator(self, data=None, *args, **kwargs):
+        """
+            Property that is set for easier comprehension of the separation of concerns,
+            and standardizing access to the validation class.
+        """
         return super(models.Model, self)
 
     def reference(self):
@@ -245,30 +248,6 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
         if self.to_date < datetime.date.today() and self.status != Trip.COMPLETED:
             return True
         return False
-
-    @property
-    def requires_hr_approval(self):
-        return self.travel_type in [
-            # Trip.STAFF_DEVELOPMENT
-        ]
-
-    @property
-    def requires_rep_approval(self):
-        return self.international_travel
-
-    # @property
-    # def can_be_approved(self):
-    #     if self.status != Trip.SUBMITTED:
-    #         return False
-    #     if not self.approved_by_supervisor:
-    #         return False
-    #     if self.requires_hr_approval\
-    #     and not self.approved_by_human_resources:
-    #         return False
-    #     if self.requires_rep_approval\
-    #     and not self.representative_approval:
-    #         return False
-    #     return True
 
     def user_has_approval_permission(self, user):
         # here we would check if the user has the specific permissions as well
@@ -299,16 +278,22 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
     def valid_transition_to_completed(self):
         return self.validator.transition_to_completed_valid()
 
-
     def get_transition(self, data):
+        """
+        :param data: a dict that contains the potential transition "status"
+        :return: a callable transition function or None
+        """
+
+        # return None if the proposed status was not present or
+        # is not different form the instance status
         if (not data.get('status') in [s[0] for s in self.TRIP_STATUS] or
                 data.get('status') == self.status):
-            return False
+            return None
         else:
             try:
                 return getattr(self, 'transition_to_'+data.get('status'))
             except AttributeError as e:
-                return False
+                return None
 
     @transition(
         field=status,
@@ -350,8 +335,11 @@ class Trip(AdminURLMixin, models.Model, TripValidationMixin):
     def transition_to_completed(self, *args, **kwargs):
         pass
 
-
     def make_auto_transition_updates(self, status):
+        """
+            Function that makes all the necessary updates for any automatic_transition that was performed
+            This function only gets called if an auto_transmition is performed
+        """
         if status == self.APPROVED:
             self.approved_date = datetime.date.today()
             self.status = Trip.APPROVED
