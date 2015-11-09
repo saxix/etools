@@ -8,7 +8,7 @@ import django_fsm
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('trips', '0008_trip_status_fsm'),
+        ('trips', '0007_auto_20151027_1852'),
     ]
 
     operations = [
