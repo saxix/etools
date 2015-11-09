@@ -64,26 +64,10 @@ class TripForm(ModelForm):
             'main_observations':
                 CKEditorWidget(editor_options={'startupFocus': False}),
         }
-    #
-    # def full_clean(self):
-    #     print self.instance.purpose_of_travel
-    #
-    #     #raise ValidationError("i hope it doesn't save")
-    #     return super(TripForm, self).full_clean()
-    # #
-    # def save(self, *args, **kwargs):
-    #     raise ValidationError("i hope it doesn't save")
-    #     return super(TripForm, self).save(*args, **kwargs)
-
 
     def clean(self):
         cleaned_data = super(TripForm, self).clean()
-        status = cleaned_data.get(u'status')
-        travel_type = cleaned_data.get(u'travel_type')
-        ta_required = cleaned_data.get(u'ta_required')
-        programme_assistant = cleaned_data.get(u'programme_assistant')
-        trip_report = cleaned_data.get(u'main_observations')
-        ta_trip_took_place_as_planned = cleaned_data.get(u'ta_trip_took_place_as_planned')
+
 
         validator = self.instance.validator
         validator.set_data(cleaned_data)
@@ -100,22 +84,6 @@ class TripForm(ModelForm):
                 raise ValidationError([ValidationError(err) for err in validator.update_is_valid[1]])
 
 
-
-        if status == Trip.COMPLETED:
-            if not trip_report and travel_type != Trip.STAFF_ENTITLEMENT:
-                raise ValidationError(
-                    'You must provide a narrative report before the trip can be completed'
-                )
-
-            if ta_required and ta_trip_took_place_as_planned is False and self.request.user != programme_assistant:
-                raise ValidationError(
-                    'Only the TA travel assistant can complete the trip'
-                )
-
-            # if not approved_by_human_resources and travel_type == Trip.STAFF_DEVELOPMENT:
-            #     raise ValidationError(
-            #         'STAFF DEVELOPMENT trip must be certified by Human Resources before it can be completed'
-            #     )
 
         #TODO: this can be removed once we upgrade to 1.7
         return cleaned_data

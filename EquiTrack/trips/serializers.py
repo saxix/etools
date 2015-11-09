@@ -136,7 +136,7 @@ class TripSerializer(serializers.ModelSerializer):
 
         instance.validator.set_data(validated_data)
         if not instance.validator.update_is_valid[0]:
-            raise ValidationError(detail=instance.validator.update_is_valid[1])
+            raise ValidationError(detail={"detail": instance.validator.update_is_valid[1]})
 
         for key, value in validated_data.iteritems():
             setattr(instance, key, value)
