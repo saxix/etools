@@ -71,10 +71,16 @@ var optimizeHtmlTask = function(src, dest) {
     searchPath: ['.tmp', 'app', dist()]
   });
 
+  var replaceImg =  function(imgStr) {
+    return '/static/' + imgStr;
+  };
+
   return gulp.src(src)
     // Replace path for vulcanized assets
     .pipe($.if('*.html', $.replace('elements/elements.html', 
       '/static/partner_portal/elements/elements.vulcanized.html')))
+    // Replace image links
+    .pipe($.if('*.html', $.replace('images/', replaceImg)))
     .pipe(assets)
     // Concatenate and minify JavaScript
     .pipe($.if('*.js', $.uglify({
