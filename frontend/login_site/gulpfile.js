@@ -44,6 +44,28 @@ var dist = function(subpath) {
   return !subpath ? DIST : path.join(DIST, subpath);
 };
 
+var etoolsRoot = '../EquiTrack';
+var etoolsAssetsPath = path.join(etoolsRoot, 'assets');
+var etoolsImages = path.join(etoolsRoot, 'assets/images');
+var etoolsTemplatesPath = path.join(etoolsRoot, 'templates/frontend');
+
+var etoolsDist = function(subpath) {
+  if (subpath === 'images') {
+    return etoolsImages;
+  } else if (subpath === 'elements') {
+    return path.join(etoolsAssetsPath, 'partner_portal/elements');
+  } else if (subpath === 'index') {
+    return path.join(etoolsTemplatesPath, 'partner_portal');
+  } else if (subpath === 'styles') {
+    return path.join(etoolsAssetsPath, 'partner_portal/styles');
+  } else if (subpath === 'assets') {
+    return etoolsAssetsPath;
+  } else if (subpath === 'templates') {
+    return etoolsTemplatesPath;
+  }
+  return !subpath ? etoolsAssetsPath : path.join(etoolsAssetsPath, subpath);
+};
+
 var styleTask = function(stylesPath, srcs) {
   return gulp.src(srcs.map(function(src) {
       return path.join('app', stylesPath, src);
@@ -333,6 +355,22 @@ gulp.task('deploy-gh-pages', function() {
       silent: true,
       branch: 'gh-pages'
     }), $.ghPages()));
+});
+
+// copy over the distribution files for partner_portal
+gulp.task('etoolsDistFiles', function() {
+  
+  var accountHtmls = gulp.src(['dist/account/*.html'])
+    .pipe(gulp.dest(path.join(etoolsTemplatesPath, 'account')));
+
+  var htmls = gulp.src(['dist/choose_login.html',
+    'dist/base_polymer.html'])
+    .pipe(gulp.dest(etoolsTemplatesPath));
+
+  var statics = gulp.src('dist/static/**/*')
+    .pipe(gulp.dest(etoolsDist('assets')));
+
+  return merge(htmls, accountHtmls, statics);
 });
 
 // Load tasks for web-component-tester
