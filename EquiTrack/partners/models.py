@@ -13,6 +13,7 @@ from django.db.models.signals import post_save, pre_delete
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext as _
 from django.utils.functional import cached_property
+from collections import namedtuple
 
 from jsonfield import JSONField
 from django_hstore import hstore
@@ -259,23 +260,81 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         """
         Planned cash transfers for the current year
         """
+
+        cursor = connection.cursor()
+
         year = datetime.date.today().year
         if self.partner_type == u'Government':
-            total = GovernmentInterventionResult.objects.filter(
-                intervention__partner=self,
-                year=year).aggregate(
-                models.Sum('planned_amount')
-            )['planned_amount__sum'] or 0
+
+            cursor.execute('SELECT '
+                                'partners_fundingcommitment.expenditure_amount,'
+                                'partners_fundingcommitment.id AS fc_id,'
+                                'pa.id AS partner_id,'
+                                'partners_pca.id AS intervention_id,'
+                                'reports_resultstructure.id AS resultstructure_id'
+                            ' FROM '
+                                'lebanon.partners_partnerorganization pa,'
+                                'lebanon.partners_fundingcommitment,'
+                                'lebanon.partners_pca,'
+                                'lebanon.reports_resultstructure'
+                            ' WHERE '
+                                'partners_fundingcommitment.intervention_id = partners_pca.id AND '
+                                ' partners_pca.partner_id = pa.id AND '
+                                ' reports_resultstructure.id = partners_pca.result_structure_id AND '
+                                ' partners_pca.partner_id = %s', [self.id])
+
+            desc = cursor.description
+            nt_result = namedtuple('Result', [col[0] for col in desc])
+            rows = [nt_result(*row) for row in cursor.fetchall()]
+            total=0
+            # total = GovernmentInterventionResult.objects.filter(
+            #         intervention__partner=self,
+            #         year=year).prefetch_related(
+            #         Prefetch('intervention', queryset=GovernmentIntervention.objects.all(), to_attr='gr'),
+            #         Prefetch('result', to_attr='gresult')
+            # ).aggregate(models.Sum('planned_amount'))['planned_amount__sum'] or 0
         else:
-            q = PartnershipBudget.objects.filter(partnership__partner=self,
-                                                 partnership__status__in=[PCA.ACTIVE,
-                                                                          PCA.IMPLEMENTED],
-                                                 year=year)
-            q = q.order_by("partnership__id", "-created").\
-                distinct('partnership__id').values_list('unicef_cash', flat=True)
-            total = sum(q)
+            cursor.execute('SELECT '
+                                'partners_partnerorganization.id AS partner_id,'
+                                'reports_resultstructure.id AS resultstructure_id,'
+                                'partners_partnershipbudget.id AS partnershipbudget_id,'
+                                'partners_partnershipbudget.unicef_cash,'
+                                'partners_partnershipbudget.year,'
+                                'partners_partnerorganization.partner_type'
+                                ' FROM '
+                                'partners_partnerorganization,'
+                                'reports_resultstructure,'
+                                'partners_partnershipbudget,'
+                                'partners_pca'
+                                ' WHERE '
+                                'partners_partnershipbudget.partnership_id = partners_pca.id AND '
+                                'partners_pca.result_structure_id = reports_resultstructure.id AND '
+                                'partners_pca.partner_id = partners_partnerorganization.id AND '
+                                'partners_pca.partner_id = %s', [self.id])
+            desc = cursor.description
+            nt_result = namedtuple('Result', [col[0] for col in desc])
+            rows = [nt_result(*row) for row in cursor.fetchall()]
+            total = sum(x.unicef_cash for x in rows if x.year == str(year))
+
+            # q = PartnershipBudget.objects\
+            #     .filter(partnership__partner=self,
+            #             partnership__status__in=[PCA.ACTIVE, PCA.IMPLEMENTED],
+            #             year=year).prefetch_related(
+            #                 Prefetch('partnership', queryset=PCA.objects.filter(
+            #                     partner=self,
+            #                     status__in=[PCA.ACTIVE, PCA.IMPLEMENTED])
+            #                 )
+            #     )
+            # q = PartnershipBudget.objects.filter(partnership__partner=self,
+            #                                      partnership__status__in=[PCA.ACTIVE,
+            #                                                               PCA.IMPLEMENTED],
+            #                                      year=year)
+            # q = q.order_by("partnership__id", "-created").\
+            #     distinct('partnership__id').values_list('unicef_cash', flat=True)
+            # total = sum(q)
 
         return total
+
 
     @property
     def actual_cash_transferred(self):
@@ -283,13 +342,39 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         Actual cash transferred for the current year
         """
         year = datetime.date.today().year
-        total = FundingCommitment.objects.filter(
-            intervention__partner=self,
-            intervention__status__in=[PCA.ACTIVE, PCA.IMPLEMENTED],
-            end__year=year).aggregate(
-            models.Sum('expenditure_amount')
-        )
-        return total[total.keys()[0]] or 0
+
+        cursor = connection.cursor()
+        cursor.execute('SELECT '
+                            'partners_fundingcommitment.expenditure_amount,'
+                            'partners_fundingcommitment.id AS fc_id,'
+                            'partners_partnerorganization.id AS partner_id,'
+                            'partners_pca.id AS intervention_id,'
+                            'reports_resultstructure.id AS resultstructure_id,'
+                            'partners_fundingcommitment.end'
+                        ' FROM '
+                            'partners_partnerorganization,'
+                            'lebanon.partners_fundingcommitment,'
+                            'lebanon.partners_pca,'
+                            'lebanon.reports_resultstructure'
+                        ' WHERE '
+                            'partners_fundingcommitment.intervention_id = partners_pca.id AND '
+                            'partners_pca.partner_id = partners_partnerorganization.id AND '
+                            'reports_resultstructure.id = partners_pca.result_structure_id AND '
+                            'partners_partnerorganization.id = %s', [self.id])
+
+        desc = cursor.description
+        nt_result = namedtuple('Result', [col[0] for col in desc])
+        rows = [nt_result(*row) for row in cursor.fetchall()]
+        total = sum(x.expenditure_amount for x in rows)
+        return total or 0
+
+        # total = FundingCommitment.objects.filter(
+        #     intervention__partner=self,
+        #     intervention__status__in=[PCA.ACTIVE, PCA.IMPLEMENTED],
+        #     end__year=year).aggregate(
+        #     models.Sum('expenditure_amount')
+        # )
+        # return total[total.keys()[0]] or 0
 
     @property
     def total_cash_transferred(self):
