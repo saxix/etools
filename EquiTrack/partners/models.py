@@ -527,13 +527,33 @@ class PartnerOrganization(AdminURLMixin, models.Model):
 
     @property
     def follow_up_flags(self):
-        follow_ups = [
-            action for trip in self.trips
-            for action in trip.actionpoint_set.filter(
-                completed_date__isnull=True
-            )
-            if action.follow_up
-        ]
+        cursor = connection.cursor()
+        cursor.execute('SELECT '
+                            'trips_actionpoint.id'
+                        ' FROM '
+                            'trips_trip,'
+                            'partners_partnerorganization,'
+                            'trips_actionpoint,'
+                            'trips_trip_partners'
+                        ' WHERE '
+                            'trips_actionpoint.trip_id = trips_trip.id AND '
+                            'trips_trip_partners.trip_id = trips_trip.id AND '
+                            'trips_trip_partners.partnerorganization_id = partners_partnerorganization.id AND '
+                            'partners_partnerorganization.id = %s AND '
+                            'trips_actionpoint.completed_date IS NULL  AND '
+                            'trips_actionpoint.follow_up = TRUE;', [self.id])
+
+        desc = cursor.description
+        nt_result = namedtuple('Result', [col[0] for col in desc])
+        follow_ups = [nt_result(*row) for row in cursor.fetchall()]
+
+        # follow_ups = [
+        #     action for trip in self.trips
+        #     for action in trip.actionpoint_set.filter(
+        #         completed_date__isnull=True
+        #     )
+        #     if action.follow_up
+        # ]
         return len(follow_ups)
 
     def audits(self):
