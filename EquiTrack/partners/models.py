@@ -5,7 +5,7 @@ __author__ = 'jcranwellward'
 import datetime
 from dateutil.relativedelta import relativedelta
 
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.conf import settings
 from django.db import models, connection, transaction
 from django.contrib.auth.models import Group
@@ -260,7 +260,6 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         """
         Planned cash transfers for the current year
         """
-
         cursor = connection.cursor()
 
         year = datetime.date.today().year
@@ -365,7 +364,7 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         desc = cursor.description
         nt_result = namedtuple('Result', [col[0] for col in desc])
         rows = [nt_result(*row) for row in cursor.fetchall()]
-        total = sum(x.expenditure_amount for x in rows)
+        total = sum(x.expenditure_amount for x in rows if x.end and x.end.year == year)
         return total or 0
 
         # total = FundingCommitment.objects.filter(
@@ -385,39 +384,69 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         if not cp:
             # if no current structure loaded return 0
             return 0
-        total = FundingCommitment.objects.filter(
-            end__gte=cp.from_date,
-            end__lte=cp.to_date,
-            # this or
-            intervention__partner=self,
-            intervention__status__in=[PCA.ACTIVE, PCA.IMPLEMENTED]).aggregate(
-            models.Sum('expenditure_amount')
-            # government_intervention in
-            # gov_intervention__partner=self,
-            # gov_intervention__status__in=[GovernmentIntervention.ACTIVE, GovernmentIntervention.IMPLEMENTED]
-            # ).aggregate(
-            # models.Sum('expenditure_amount')
-        )
-        return total[total.keys()[0]] or 0
+
+        cursor = connection.cursor()
+        cursor.execute('SELECT '
+                            'partners_fundingcommitment.expenditure_amount,'
+                            'partners_fundingcommitment.id AS fc_id,'
+                            'partners_partnerorganization.id AS partner_id,'
+                            'partners_pca.id AS intervention_id,'
+                            'reports_resultstructure.id AS resultstructure_id,'
+                            'partners_fundingcommitment.end'
+                        ' FROM '
+                            'partners_partnerorganization,'
+                            'lebanon.partners_fundingcommitment,'
+                            'lebanon.partners_pca,'
+                            'lebanon.reports_resultstructure'
+                        ' WHERE '
+                            'partners_fundingcommitment.intervention_id = partners_pca.id AND '
+                            'partners_pca.partner_id = partners_partnerorganization.id AND '
+                            'reports_resultstructure.id = partners_pca.result_structure_id AND '
+                            'partners_partnerorganization.id = %s', [self.id])
+
+        desc = cursor.description
+        nt_result = namedtuple('Result', [col[0] for col in desc])
+        rows = [nt_result(*row) for row in cursor.fetchall()]
+        total = sum(x.expenditure_amount for x in rows if x.end >= cp.from_date and cp.to_date)
+        return total or 0
+
+        # total = FundingCommitment.objects.filter(
+        #     end__gte=cp.from_date,
+        #     end__lte=cp.to_date,
+        #     # this or
+        #     intervention__partner=self,
+        #     intervention__status__in=[PCA.ACTIVE, PCA.IMPLEMENTED]).aggregate(
+        #     models.Sum('expenditure_amount')
+        #
+        #     # government_intervention in
+        #     # gov_intervention__partner=self,
+        #     # gov_intervention__status__in=[GovernmentIntervention.ACTIVE, GovernmentIntervention.IMPLEMENTED]
+        #     # ).aggregate(
+        #     # models.Sum('expenditure_amount')
+        # )
+        # return total[total.keys()[0]] or 0
 
     @property
     def planned_visits(self):
         from trips.models import Trip
         # planned visits
         pv = 0
+        rows = self.cp_cycle_trip_links
+        pv = len(filter(lambda x: x.travel_type == Trip.PROGRAMME_MONITORING and x.status not in [Trip.CANCELLED, Trip.COMPLETED], rows))
+        # pv = len(x.id for x in rows if x.travel_type == Trip.PROGRAMME_MONITORING and x.status not in [Trip.CANCELLED, Trip.COMPLETED])
 
-
-        pv = self.cp_cycle_trip_links.filter(
-                trip__travel_type=Trip.PROGRAMME_MONITORING
-            ).exclude(
-                trip__status__in=[Trip.CANCELLED, Trip.COMPLETED]
-            ).count() or 0
+        # pv = self.cp_cycle_trip_links.filter(
+        #         trip__travel_type=Trip.PROGRAMME_MONITORING
+        #     ).exclude(
+        #         trip__status__in=[Trip.CANCELLED, Trip.COMPLETED]
+        #     ).count() or 0
 
 
         return pv
 
     @cached_property
     def cp_cycle_trip_links(self):
+
         from trips.models import Trip
         crs = ResultStructure.current()
         if self.partner_type == u'Government':
@@ -426,10 +455,32 @@ class PartnerOrganization(AdminURLMixin, models.Model):
                         trip__from_date__gte=crs.from_date
                 ).distinct('trip')
         else:
-            return self.linkedpartner_set.filter(
-                    trip__from_date__lt=crs.to_date,
-                    trip__from_date__gte=crs.from_date
-                ).distinct('trip')
+            cursor = connection.cursor()
+            cursor.execute('SELECT '
+                                'trips_linkedpartner.id,'
+                                'trips_trip.status,'
+                                'trips_trip.travel_type,'
+                                'trips_trip.from_date'
+                            ' FROM '
+                                'lebanon.trips_linkedpartner,'
+                                'lebanon.trips_trip,'
+                                'lebanon.partners_partnerorganization'
+                            ' WHERE '
+                                'trips_linkedpartner.trip_id = trips_trip.id AND '
+                                'trips_linkedpartner.partner_id = partners_partnerorganization.id AND '
+                                'trips_linkedpartner.partner_id = %s AND '
+                                'trips_trip.from_date < %s AND '
+                                'trips_trip.to_date >= %s;', [self.id, crs.to_date, crs.from_date])
+
+
+            desc = cursor.description
+            nt_result = namedtuple('Result', [col[0] for col in desc])
+            rows = [nt_result(*row) for row in cursor.fetchall()]
+            return rows
+            # return self.linkedpartner_set.filter(
+            #         trip__from_date__lt=crs.to_date,
+            #         trip__from_date__gte=crs.from_date
+            #     ).distinct('trip')
 
 
     @property
@@ -452,18 +503,27 @@ class PartnerOrganization(AdminURLMixin, models.Model):
         :return: all done programmatic visits
         '''
         from trips.models import Trip
-        return self.cp_cycle_trip_links.filter(
-            trip__travel_type=Trip.PROGRAMME_MONITORING,
-            trip__status__in=[Trip.COMPLETED]
-        ).count()
+        rows = self.cp_cycle_trip_links
+        return len(filter(lambda x: x.travel_type == Trip.PROGRAMME_MONITORING and x.status not in [Trip.COMPLETED], rows))
+
+        # return Count(x.id for x in rows if x.travel_type == Trip.PROGRAMME_MONITORING and x.status in [Trip.COMPLETED])
+
+        # return self.cp_cycle_trip_links.filter(
+        #     trip__travel_type=Trip.PROGRAMME_MONITORING,
+        #     trip__status__in=[Trip.COMPLETED]
+        # ).count()
 
     @property
     def spot_checks(self):
         from trips.models import Trip
-        return self.cp_cycle_trip_links.filter(
-            trip__travel_type=Trip.SPOT_CHECK,
-            trip__status__in=[Trip.COMPLETED]
-        ).count()
+        rows = self.cp_cycle_trip_links
+        return len(filter(lambda x: x.travel_type == Trip.SPOT_CHECK and x.status not in [Trip.COMPLETED], rows))
+        # return Count(x.id for x in rows if x.travel_type == Trip.SPOT_CHECK and x.status in [Trip.COMPLETED])
+
+        # return self.cp_cycle_trip_links.filter(
+        #     trip__travel_type=Trip.SPOT_CHECK,
+        #     trip__status__in=[Trip.COMPLETED]
+        # ).count()
 
     @property
     def follow_up_flags(self):
