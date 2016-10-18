@@ -34,6 +34,8 @@ class ResultStructure(models.Model):
     class Meta:
         ordering = ['name']
         unique_together = (("name", "from_date", "to_date"),)
+        verbose_name = 'Humanitarian Response Plan'
+        verbose_name_plural = 'Humanitarian Response Plans'
 
     def __unicode__(self):
         return self.name
@@ -99,7 +101,8 @@ class ResultManager(models.Manager):
 
 class Result(MPTTModel):
 
-    result_structure = models.ForeignKey(ResultStructure, null=True, blank=True, on_delete=models.DO_NOTHING)
+    result_structure = models.ForeignKey(ResultStructure, null=True, blank=True,
+                                         on_delete=models.DO_NOTHING, verbose_name="Humanitarian Response Plan")
     country_programme = models.ForeignKey(CountryProgramme, null=True, blank=True)
     result_type = models.ForeignKey(ResultType)
     sector = models.ForeignKey(Sector, null=True, blank=True)
@@ -175,7 +178,7 @@ class Milestone(models.Model):
 class Goal(models.Model):
 
     result_structure = models.ForeignKey(
-        ResultStructure, blank=True, null=True, on_delete=models.DO_NOTHING)
+        ResultStructure, blank=True, null=True, on_delete=models.DO_NOTHING, verbose_name='Humanitarian Response Plan')
     sector = models.ForeignKey(Sector, related_name='goals')
     name = models.CharField(max_length=512L, unique=True)
     description = models.CharField(max_length=512L, blank=True)
@@ -206,7 +209,7 @@ class Indicator(models.Model):
     )
     result_structure = models.ForeignKey(
         ResultStructure,
-        blank=True, null=True, on_delete=models.DO_NOTHING
+        blank=True, null=True, on_delete=models.DO_NOTHING, verbose_name='Humanitarian Response Plan'
     )
 
     result = models.ForeignKey(Result, null=True, blank=True)
