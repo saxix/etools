@@ -1373,14 +1373,6 @@ class AmendmentLog(TimeStampedModel):
 class AgreementAmendmentLog(TimeStampedModel):
 
         agreement = models.ForeignKey(Agreement, related_name='amendments_log')
-        type = models.CharField(
-            max_length=50,
-            choices=Choices(
-                'Authorised Officers',
-                'Banking Info',
-                'Agreement Changes',
-                'Additional Clauses',
-            ))
         amended_at = models.DateField(null=True, verbose_name='Signed At')
         amendment_number = models.IntegerField(default=0)
         status = models.CharField(
@@ -1406,6 +1398,32 @@ class AgreementAmendmentLog(TimeStampedModel):
             ).order_by('created').values_list('id', flat=True))
 
             return objects.index(self.id) + 1 if self.id in objects else len(objects) + 1
+
+
+class AgreementAmendmentType(TimeStampedModel):
+
+        AgreementAmendmentLog = models.ForeignKey(Agreement, related_name='amendments_log_types')
+        type = models.CharField(
+            max_length=50,
+            choices=Choices(
+                'Authorised Officers',
+                'Banking Info',
+                'Agreement Changes',
+                'Additional Clauses',
+            ))
+        amended_at = models.DateField(null=True, verbose_name='Signed At')
+        status = models.CharField(
+            max_length=32L,
+            blank=True,
+            choices=PCA.PCA_STATUS,
+        )
+
+        def __unicode__(self):
+            return u'{}: {} - {}'.format(
+                self.amendment_number,
+                self.type,
+                self.amended_at
+            )
 
 
 class PartnershipBudget(TimeStampedModel):
