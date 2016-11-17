@@ -1375,16 +1375,10 @@ class AgreementAmendmentLog(TimeStampedModel):
         agreement = models.ForeignKey(Agreement, related_name='amendments_log')
         amended_at = models.DateField(null=True, verbose_name='Signed At')
         amendment_number = models.IntegerField(default=0)
-        status = models.CharField(
-            max_length=32L,
-            blank=True,
-            choices=PCA.PCA_STATUS,
-        )
 
         def __unicode__(self):
-            return u'{}: {} - {}'.format(
+            return u'{} - {}'.format(
                 self.amendment_number,
-                self.type,
                 self.amended_at
             )
 
@@ -1401,29 +1395,32 @@ class AgreementAmendmentLog(TimeStampedModel):
 
 
 class AgreementAmendmentType(TimeStampedModel):
+    LN = u'change in legal name of implementing partner'
+    CP = u'extension of country programme cycle'
+    AO = u'change authorized officer'
+    BI = u'banking information'
+    AC = u'additional clause'
+    AE = u'amend existing clause'
+    AMENDMENT_TYPES = (
+        (LN, u'Change in Legal Name of Implementing Partner'),
+        (CP, u'Extension of Country Programme Cycle'),
+        (AO, u'Change Authorized Officer'),
+        (BI, u'Banking Information'),
+        (AC, u'Additional Clause'),
+        (AE, u'Amend Existing Clause')
+    )
 
-        AgreementAmendmentLog = models.ForeignKey(Agreement, related_name='amendments_log_types')
-        type = models.CharField(
-            max_length=50,
-            choices=Choices(
-                'Authorised Officers',
-                'Banking Info',
-                'Agreement Changes',
-                'Additional Clauses',
-            ))
-        amended_at = models.DateField(null=True, verbose_name='Signed At')
-        status = models.CharField(
-            max_length=32L,
-            blank=True,
-            choices=PCA.PCA_STATUS,
-        )
+    agreement_amendment = models.ForeignKey(Agreement, related_name='amendment_types')
+    type = models.CharField(
+        choices=AMENDMENT_TYPES,
+        default=AC,
+        max_length=255,
+        verbose_name=u'Amendment type'
+    )
+    cp_end_date = models.DateField(null=True, blank=True)
+    officer = models.ForeignKey(AuthorizedOfficer, null=True, blank=True)
+    clause = models.TextField(blank=True, null=True)
 
-        def __unicode__(self):
-            return u'{}: {} - {}'.format(
-                self.amendment_number,
-                self.type,
-                self.amended_at
-            )
 
 
 class PartnershipBudget(TimeStampedModel):
