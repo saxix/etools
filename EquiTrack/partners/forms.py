@@ -34,7 +34,7 @@ from reports.models import (
     ResultStructure,
 )
 from locations.models import Location
-from reports.models import Sector, Result, ResultType, Indicator
+from reports.models import Sector, Result, ResultType, Indicator, CountryProgramme
 from .models import (
     PCA,
     PartnerOrganization,
@@ -332,7 +332,7 @@ class AgreementForm(UserGroupForm):
                     raise ValidationError({'agreement_type': err})
 
             # PCAs last as long as the most recent CPD
-            result_structure = ResultStructure.current()
+            result_structure = CountryProgramme.current()
             if result_structure and end and end > result_structure.to_date:
                 raise ValidationError(
                     {'end': u'This agreement cannot last longer than the current {} which ends on {}'.format(
@@ -342,7 +342,7 @@ class AgreementForm(UserGroupForm):
 
             # set end date to result structure end date
             if end is None:
-                self.cleaned_data[u'end'] = ResultStructure.current().to_date
+                self.cleaned_data[u'end'] = CountryProgramme.current().to_date
 
             #  set start date to one of the signed dates
             if start is None:
@@ -713,7 +713,7 @@ class PartnershipForm(UserGroupForm):
         if submission_date and submission_date < initiation_date:
             raise ValidationError({'submission_date': self.ERROR_MESSAGES['submission_date']})
 
-        if review_date and review_date < submission_date and review_date < initiation_date:
+        if review_date and submission_date and review_date < submission_date and review_date < initiation_date:
             raise ValidationError({'review_date': self.ERROR_MESSAGES['review_date']})
 
         if p_codes and location_sector:
