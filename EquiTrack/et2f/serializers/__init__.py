@@ -132,8 +132,6 @@ class TravelDetailsSerializer(serializers.ModelSerializer):
     report = serializers.CharField(source='report_note', required=False, default='')
     mode_of_travel = serializers.PrimaryKeyRelatedField(queryset=ModeOfTravel.objects.all(), required=False, many=True)
 
-    purpose = serializers.CharField(required=True)
-
     class Meta:
         model = Travel
         fields = ('reference_number', 'supervisor', 'office', 'end_date', 'section', 'international_travel',
