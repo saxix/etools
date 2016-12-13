@@ -10,7 +10,6 @@ from django.db.transaction import atomic
 from et2f import PULI_USER_USERNAME, PULI_USER_PASSWORD
 from et2f.models import Currency, AirlineCompany, DSARegion, ExpenseType, WBS, Grant, Fund
 from partners.models import PartnerOrganization
-from reports.models import Result, ResultType
 from users.models import Country, Office
 
 from _private import populate_permission_matrix
