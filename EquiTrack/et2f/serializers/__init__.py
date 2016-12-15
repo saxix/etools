@@ -6,6 +6,7 @@ from django.utils.functional import cached_property
 from rest_framework import serializers, ISO_8601
 from rest_framework.exceptions import ValidationError
 
+from locations.models import Location
 from et2f.models import TravelActivity, Travel, IteneraryItem, Expense, Deduction, CostAssignment, Clearances,\
     TravelPermission, TravelAttachment, AirlineCompany, ModeOfTravel
 
@@ -86,6 +87,8 @@ class ClearancesSerializer(PermissionBasedModelSerializer):
 
 class TravelActivitySerializer(PermissionBasedModelSerializer):
     id = serializers.IntegerField(required=False)
+    locations = serializers.PrimaryKeyRelatedField(many=True, queryset=Location.objects.all(), required=False,
+                                                   allow_null=True)
 
     class Meta:
         model = TravelActivity
@@ -131,7 +134,7 @@ class TravelDetailsSerializer(serializers.ModelSerializer):
     activities = TravelActivitySerializer(many=True, required=False)
     attachments = TravelAttachmentSerializer(many=True, read_only=True)
     cost_summary = CostSummarySerializer(read_only=True)
-    report = serializers.CharField(source='report_note', required=False, default='')
+    report = serializers.CharField(source='report_note', required=False, default='', allow_blank=True)
     mode_of_travel = serializers.PrimaryKeyRelatedField(queryset=ModeOfTravel.objects.all(), required=False, many=True)
 
     # Fix because of a frontend validation failure (fix it on the frontend first)
@@ -143,7 +146,7 @@ class TravelDetailsSerializer(serializers.ModelSerializer):
                   'traveler', 'start_date', 'ta_required', 'purpose', 'id', 'itinerary', 'expenses', 'deductions',
                   'cost_assignments', 'clearances', 'status', 'activities', 'mode_of_travel', 'estimated_travel_cost',
                   'currency', 'completed_at', 'canceled_at', 'rejection_note', 'cancellation_note', 'attachments',
-                  'cost_summary', 'certification_note', 'report', 'additional_note')
+                  'cost_summary', 'certification_note', 'report', 'additional_note', 'misc_expenses')
         # Review this, as a developer could be confusing why the status field is not saved during an update
         read_only_fields = ('status', 'reference_number')
 
@@ -192,7 +195,8 @@ class TravelDetailsSerializer(serializers.ModelSerializer):
     def create_related_models(self, model, related_data, **kwargs):
         new_models = []
         for data in related_data:
-            m2m_fields = {k: data.pop(k, []) for k in data
+            data = dict(data)
+            m2m_fields = {k: data.pop(k, []) for k in data.keys()
                           if isinstance(model._meta.get_field_by_name(k)[0], ManyToManyField)}
             data.update(kwargs)
             related_instance = model.objects.create(**data)

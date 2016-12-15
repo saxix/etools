@@ -9,6 +9,7 @@ from django.db import connection
 from django.db.transaction import atomic
 
 from et2f import PULI_USER_USERNAME, PULI_USER_PASSWORD
+
 from et2f.models import Currency, AirlineCompany, DSARegion, ExpenseType, WBS, Grant, Fund
 from partners.models import PartnerOrganization
 from users.models import Country, Office
@@ -18,16 +19,33 @@ from _private import populate_permission_matrix
 
 # DEVELOPMENT CODE -
 class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument('username', nargs=1)
+        parser.add_argument('password', nargs=1, default='password')
+        parser.add_argument('-u', '--with_users', action='store_true', default=False)
+        parser.add_argument('-o', '--with_offices', action='store_true', default=False)
+        parser.add_argument('-p', '--with_partners', action='store_true', default=False)
+
     @atomic
     def handle(self, *args, **options):
-        user = self._create_admin_user()
+        username = options['username']
+        password = options['password']
+        user = self._get_or_create_admin_user(username, password)
         connection.set_tenant(user.profile.country)
 
         self._load_currencies()
-        self._load_users()
+
+        if options.get('with_users'):
+            self._load_users()
+
         self._load_airlines()
-        self._load_offices()
-        self._load_partners()
+
+        if options.get('with_offices'):
+            self._load_offices()
+
+        if options.get('with_partners'):
+            self._load_partners()
+
         self._load_dsa_regions()
         self._load_permission_matrix()
         self._add_wbs()
@@ -36,22 +54,22 @@ class Command(BaseCommand):
         self._add_expense_types()
         self._add_user_groups()
 
-    def _create_admin_user(self):
+    def _get_or_create_admin_user(self, username, password):
         User = get_user_model()
 
         try:
-            return User.objects.get(username=PULI_USER_USERNAME)
+            return User.objects.get(username=username)
         except ObjectDoesNotExist:
             pass
 
         uat_country = Country.objects.get(name='UAT')
 
-        user = User(username=PULI_USER_USERNAME,
+        user = User(username=username,
                     first_name='Puli',
                     last_name='Lab',
                     is_superuser=True,
                     is_staff=True)
-        user.set_password(PULI_USER_PASSWORD)
+        user.set_password(password)
         user.save()
 
         profile = user.profile
