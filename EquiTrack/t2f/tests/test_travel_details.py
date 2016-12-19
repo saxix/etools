@@ -166,4 +166,3 @@ class TravelDetails(APITenantTestCase):
 
         self.assertEqual(response_json['activities'][0]['locations'], [location.id, location_2.id])
         self.assertEqual(response_json['activities'][1]['locations'], [location_3.id])
-

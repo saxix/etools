@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError
 from locations.models import Location
 from t2f.models import TravelActivity, Travel, IteneraryItem, Expense, Deduction, CostAssignment, Clearances,\
     TravelPermission, TravelAttachment, AirlineCompany, ModeOfTravel
+from locations.models import Location
 
 
 class PermissionBasedModelSerializer(serializers.ModelSerializer):
