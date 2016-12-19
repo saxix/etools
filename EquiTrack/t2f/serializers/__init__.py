@@ -1,12 +1,13 @@
 from __future__ import unicode_literals
 
+from itertools import chain
+
 from django.contrib.auth import get_user_model
 from django.db.models.fields.related import ManyToManyField
 from django.utils.functional import cached_property
 from rest_framework import serializers, ISO_8601
 from rest_framework.exceptions import ValidationError
 
-from locations.models import Location
 from t2f.models import TravelActivity, Travel, IteneraryItem, Expense, Deduction, CostAssignment, Clearances,\
     TravelPermission, TravelAttachment, AirlineCompany, ModeOfTravel
 from locations.models import Location
@@ -165,6 +166,26 @@ class TravelDetailsSerializer(serializers.ModelSerializer):
         share_sum = sum([ca['share'] for ca in value])
         if share_sum != 100:
             raise ValidationError('Shares should add up to 100%')
+        return value
+
+    def validate_itinerary(self, value):
+        if self.transition_name == 'submit_for_approval' and len(value) < 1:
+            raise ValidationError('Travel must have at least one itinerary item')
+
+        if not value:
+            return value
+
+        dates_iterator = chain((i['departure_date'], i['arrival_date']) for i in value)
+
+        current_date = dates_iterator.next()
+        for date in dates_iterator:
+            if date is None:
+                continue
+
+            if date < current_date:
+                raise ValidationError('Itinerary items have to be ordered by date')
+            current_date = date
+
         return value
 
     # -------- Create and update methods --------
