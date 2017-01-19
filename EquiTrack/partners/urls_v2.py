@@ -11,7 +11,8 @@ from .views.agreements_v2 import (
 )
 from views.interventions_v2 import (
     InterventionListAPIView,
-    InterventionDetailAPIView
+    InterventionDetailAPIView,
+    MyInterventionsListAPIView,
 )
 
 
@@ -39,7 +40,7 @@ urlpatterns = (
 
     url(r'^interventions/$', view=InterventionListAPIView.as_view(http_method_names=['get', 'post']), name='intervention-list'),
     url(r'^interventions/(?P<pk>\d+)/$', view=InterventionDetailAPIView.as_view(http_method_names=['get', 'patch']), name='intervention-detail'),
-    # url(r'^interventions/(?P<pk>\d+)/$', view=InterventionDetailAPIView.as_view(), name='intervention-detail'),
+    url(r'^my-interventions/$', view=MyInterventionsListAPIView.as_view(), name='interventions_dashboard'),
     # TODO: figure this out
     # url(r'^partners/interventions/$', view=InterventionsView.as_view()),
 

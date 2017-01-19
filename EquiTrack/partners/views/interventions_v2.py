@@ -13,6 +13,7 @@ from rest_framework_csv import renderers as r
 from rest_framework.generics import (
     ListCreateAPIView,
     RetrieveUpdateDestroyAPIView,
+    ListAPIView,
 )
 
 from partners.models import (
@@ -250,3 +251,21 @@ class InterventionDetailAPIView(RetrieveUpdateDestroyAPIView):
             intervention_serializer = self.get_serializer(instance)
 
         return Response(intervention_serializer.data)
+
+
+class MyInterventionsListAPIView(ListAPIView):
+    # serializer_class = InterventionSerializer
+
+    def list(self, request):
+        """
+        Return All Interventions for Partner
+        """
+        interventions = Intervention.objects.filter(unicef_signatory=self.request.user).filter(
+                Q(status=Intervention.ACTIVE) | Q(status=Intervention.DRAFT)
+            ).order_by("number", "-created")
+        serializer = InterventionListSerializer(interventions, many=True)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
