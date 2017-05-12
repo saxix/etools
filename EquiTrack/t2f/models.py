@@ -354,7 +354,8 @@ class Travel(models.Model):
     @transition(status, source=[APPROVED, SENT_FOR_PAYMENT, CERTIFIED], target=SENT_FOR_PAYMENT)
     def send_for_payment(self):
         # Expenses total should have at least one element
-        assert len(self.cost_summary['expenses_total']) >= 1, 'Expenses total is empty. Please investigate'
+        if len(self.cost_summary['expenses_total']) == 0:
+            raise TransitionError('Travel should have at least one expense.')
 
         self.preserved_expenses_local = self.cost_summary['expenses_total'][0]['amount']
         self.generate_invoices()
@@ -399,7 +400,7 @@ class Travel(models.Model):
                                      'emails/certified.html')
 
     @mark_as_certified_or_completed_threshold_decorator
-    @transition(status, source=[CERTIFIED, SUBMITTED, PLANNED], target=COMPLETED,
+    @transition(status, source=[CERTIFIED, SUBMITTED, APPROVED, PLANNED], target=COMPLETED,
                 conditions=[check_trip_report, check_state_flow])
     def mark_as_completed(self):
         self.completed_at = datetime.now()
