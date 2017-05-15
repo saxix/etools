@@ -245,7 +245,7 @@ class Travel(models.Model):
 
     # Completion conditions
     def check_trip_report(self):
-        if (self.ta_required) and ((not self.report_note) or (len(self.report_note) < 1)):
+        if not self.report_note:
             raise TransitionError('Field report has to be filled.')
         return True
 
