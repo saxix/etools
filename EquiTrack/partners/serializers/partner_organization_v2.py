@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import json
 
 from django.utils import timezone
@@ -160,7 +161,7 @@ class PartnerOrganizationExportSerializer(serializers.ModelSerializer):
                           for sm in obj.staff_members.filter(active=True).all()])
 
     def get_assessments(self, obj):
-        return ', '.join(["{} ({})".format(a.type, a.completed_date) for a in obj.assessments.all()])
+        return ', '.join(["{} ({})".format(a.type, a.completed_date) for a in obj.assessments.all()]).encode('utf-8')
 
     def get_url(self, obj):
         return 'https://{}/pmp/partners/{}/details/'.format(self.context['request'].get_host(), obj.id)

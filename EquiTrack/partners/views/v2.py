@@ -167,7 +167,8 @@ class PmpStaticDropdownsListApiView(APIView):
         agreement_types = choices_to_json_ready(
             [typ for typ in Agreement.AGREEMENT_TYPES if typ[0] not in ['IC', 'AWP']])
         agreement_status = choices_to_json_ready(Agreement.STATUS_CHOICES)
-        agreement_amendment_types = choices_to_json_ready(AgreementAmendment.AMENDMENT_TYPES)
+        agreement_amendment_types = choices_to_json_ready(
+            [amd for amd in AgreementAmendment.AMENDMENT_TYPES if amd[0] != 'CP extension'])
         intervention_doc_type = choices_to_json_ready(Intervention.INTERVENTION_TYPES)
         intervention_status = choices_to_json_ready(Intervention.INTERVENTION_STATUS)
         intervention_amendment_types = choices_to_json_ready(InterventionAmendment.AMENDMENT_TYPES)
