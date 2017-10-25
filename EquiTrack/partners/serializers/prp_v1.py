@@ -19,7 +19,7 @@ class PartnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = PartnerOrganization
         depth = 1
-        fields = ('name', 'unicef_vendor_number', 'short_name')
+        fields = ('id', 'name', 'unicef_vendor_number', 'short_name')
 
 
 class AuthOfficerSerializer(serializers.ModelSerializer):
@@ -152,6 +152,11 @@ class PRPInterventionListSerializer(serializers.ModelSerializer):
     expected_results = PRPResultSerializer(many=True, read_only=True, source='all_lower_results')
     update_date = serializers.DateTimeField(source='modified')
 
+    reporting_frequencies = serializers.SerializerMethodField()
+
+    def get_reporting_frequencies(self, obj):
+        return obj.reporting_periods.values('id', 'start_date', 'end_date', 'due_date')
+
     def get_business_area_code(self, obj):
         return connection.tenant.business_area_code
 
@@ -161,6 +166,7 @@ class PRPInterventionListSerializer(serializers.ModelSerializer):
             'id', 'title', 'business_area_code',
             'offices',  # todo: convert to names, not ids
             'number',
+            'status',
             'partner_org',
             'unicef_focal_points',
             'agreement_auth_officers',
@@ -169,7 +175,7 @@ class PRPInterventionListSerializer(serializers.ModelSerializer):
             'cso_budget', 'cso_budget_currency',
             'unicef_budget', 'unicef_budget_currency',
             'funds_received', 'funds_received_currency',
-            # 'reporting_frequencies',  # todo: figure out where this comes from
+            'reporting_frequencies',  # todo: figure out where this comes from
             'expected_results',
             'update_date'
         )
