@@ -50,6 +50,8 @@
       "name": "Partner 2",
       "short_name": ""
     },
+    "status": "active",
+    "reporting_frequencies": [],
     "funds_received_currency": null,
     "cso_budget_currency": null,
     "id": 642,
@@ -75,6 +77,8 @@
       "name": "Partner 1",
       "short_name": ""
     },
+    "status": "draft",
+    "reporting_frequencies": [],
     "funds_received_currency": null,
     "cso_budget_currency": null,
     "id": 641,
@@ -100,6 +104,8 @@
       "name": "Partner 1",
       "short_name": ""
     },
+    "status": "draft",
+    "reporting_frequencies": [],
     "funds_received_currency": null,
     "cso_budget_currency": null,
     "id": 640,

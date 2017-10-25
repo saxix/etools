@@ -155,7 +155,9 @@ class PRPInterventionListSerializer(serializers.ModelSerializer):
     reporting_frequencies = serializers.SerializerMethodField()
 
     def get_reporting_frequencies(self, obj):
-        return obj.reporting_periods.values('id', 'start_date', 'end_date', 'due_date')
+        # it seems resultset .values() does not use cached data
+        # return obj.reporting_periods.values('id', 'start_date', 'end_date', 'due_date')
+        return obj.reporting_periods.all()
 
     def get_business_area_code(self, obj):
         return connection.tenant.business_area_code

@@ -44,6 +44,7 @@ class PRPInterventionListAPIView(ListAPIView):
             'partner_focal_points',
             'unicef_focal_points',
             'agreement__authorized_officers',
+            'reporting_periods',
         )
 
         query_params = self.request.query_params
