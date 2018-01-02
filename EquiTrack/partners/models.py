@@ -42,6 +42,10 @@ from partners.validation.agreements import (
 from partners.validation import interventions as intervention_validation
 
 
+def get_current_year():
+    return datetime.datetime.now().year
+
+
 def _get_partner_base_path(partner):
     return '/'.join([
         connection.schema_name,
@@ -1851,7 +1855,7 @@ class InterventionPlannedVisits(TimeStampedModel):
     Represents planned visits for the intervention
     """
     intervention = models.ForeignKey(Intervention, related_name='planned_visits')
-    year = models.IntegerField(default=datetime.datetime.now().year)
+    year = models.IntegerField(default=get_current_year)
     programmatic = models.IntegerField(default=0)
     spot_checks = models.IntegerField(default=0)
     audit = models.IntegerField(default=0)

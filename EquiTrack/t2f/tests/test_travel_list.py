@@ -258,7 +258,8 @@ class TravelList(URLAssertionMixin, APITenantTestCase):
 
         data = {
             'f_travel_type': TravelType.PROGRAMME_MONITORING,
-            'f_month': t2.start_date.month - 1,  # Frontend sends 0-11
+            'f_month': t2.start_date.month - 1,  # Python uses 1-12, but frontend sends 0-11
+            'f_year': t2.start_date.year,
             'f_cp_output': result.id,
         }
         response = self.forced_auth_req('get', reverse('t2f:travels:list:index'),

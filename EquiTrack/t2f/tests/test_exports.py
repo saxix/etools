@@ -7,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.core.urlresolvers import reverse
+from django.utils.timezone import now
 from pytz import UTC
 
 from EquiTrack.factories import (
@@ -272,9 +273,9 @@ class TravelExports(APITenantTestCase):
                           'dsa_total',
                           'expense_total',
                           'deductions_total'])
-
+        year = now().year
         self.assertEqual(rows[1],
-                         ['2017/1',
+                         ['%d/1' % year,
                           'John Doe',
                           'An Office',
                           travel.sector.name,
@@ -291,7 +292,7 @@ class TravelExports(APITenantTestCase):
                           '0.00'])
 
         self.assertEqual(rows[2],
-                         ['2017/2',
+                         ['%d/2' % year,
                           'John Doe',
                           'An Office',
                           travel_2.sector.name,
@@ -398,8 +399,10 @@ class TravelExports(APITenantTestCase):
                           'mode_of_travel',
                           'airline'])
 
+        year = now().year
+
         self.assertEqual(rows[1],
-                         ['2017/1',
+                         ['%d/1' % year,
                           'John Doe',
                           'An Office',
                           travel_1.sector.name,
@@ -414,7 +417,7 @@ class TravelExports(APITenantTestCase):
                           ''])
 
         self.assertEqual(rows[2],
-                         ['2017/1',
+                         ['%d/1' % year,
                           'John Doe',
                           'An Office',
                           travel_1.sector.name,
@@ -429,7 +432,7 @@ class TravelExports(APITenantTestCase):
                           'JetStar'])
 
         self.assertEqual(rows[3],
-                         ['2017/1',
+                         ['%d/1' % year,
                           'John Doe',
                           'An Office',
                           travel_1.sector.name,
@@ -444,7 +447,7 @@ class TravelExports(APITenantTestCase):
                           'SpiceAir'])
 
         self.assertEqual(rows[4],
-                         ['2017/2',
+                         ['%d/2' % year,
                           'Max Mustermann',
                           'An Office',
                           travel_2.sector.name,
@@ -459,7 +462,7 @@ class TravelExports(APITenantTestCase):
                           'JetStar'])
 
         self.assertEqual(rows[5],
-                         ['2017/2',
+                         ['%d/2' % year,
                           'Max Mustermann',
                           'An Office',
                           travel_2.sector.name,
@@ -569,9 +572,11 @@ class TravelExports(APITenantTestCase):
                           'fund',
                           'amount'])
 
+        year = now().year
+
         self.assertEqual(rows[1],
-                         ['2060/2017/1/01',
-                          '2017/1',
+                         ['2060/%d/1/01' % year,
+                          '%d/1' % year,
                           '100009998',
                           'USD',
                           '1232.1200',
@@ -584,8 +589,8 @@ class TravelExports(APITenantTestCase):
                           '1232.1200'])
 
         self.assertEqual(rows[2],
-                         ['2060/2017/1/02',
-                          '2017/1',
+                         ['2060/%d/1/02' % year,
+                          '%d/1' % year,
                           '100009998',
                           'USD',
                           '123.0000',
@@ -598,8 +603,8 @@ class TravelExports(APITenantTestCase):
                           '123.0000'])
 
         self.assertEqual(rows[3],
-                         ['2060/2017/2/01',
-                          '2017/2',
+                         ['2060/%d/2/01' % year,
+                          '%d/2' % year,
                           '12343424',
                           'USD',
                           '1919.1100',
@@ -612,8 +617,8 @@ class TravelExports(APITenantTestCase):
                           '1000.0000'])
 
         self.assertEqual(rows[4],
-                         ['2060/2017/2/01',
-                          '2017/2',
+                         ['2060/%d/2/01' % year,
+                          '%d/2' % year,
                           '12343424',
                           'USD',
                           '1919.1100',
