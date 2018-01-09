@@ -4,6 +4,7 @@ from collections import OrderedDict
 from datetime import timedelta
 from decimal import Decimal
 from itertools import chain
+from operator import attrgetter
 
 
 class CostSummaryCalculator(object):
@@ -248,7 +249,7 @@ class DSACalculator(object):
             dsa_dto_list.append(dto)
             counter += 1
 
-        return sorted(dsa_dto_list, cmp=lambda x, y: cmp(x.date, y.date))
+        return sorted(dsa_dto_list, key=attrgetter('date'))
 
     def check_one_day_long_trip(self, dsa_dto_list):
         # If it's a day long trip and only one less than 8 hour travel was made, no dsa applied

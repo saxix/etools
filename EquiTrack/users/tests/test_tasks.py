@@ -10,6 +10,7 @@ from mock import patch, Mock
 from tenant_schemas.utils import schema_context
 
 from django.conf import settings
+from django.utils import six
 
 from EquiTrack.factories import (
     CountryFactory,
@@ -54,7 +55,7 @@ class TestUserMapper(FastTenantTestCase):
             country = CountryFactory(business_area_code=area_code)
             res = self.mapper._get_country(area_code)
         self.assertEqual(res, country)
-        self.assertItemsEqual(self.mapper.countries, {
+        six.assertCountEqual(self, self.mapper.countries, {
             area_code: country,
             "UAT": country_uat
         })
@@ -70,7 +71,7 @@ class TestUserMapper(FastTenantTestCase):
         }
         res = self.mapper._get_country(area_code)
         self.assertEqual(res, country)
-        self.assertItemsEqual(self.mapper.countries, {
+        six.assertCountEqual(self, self.mapper.countries, {
             "UAT": country_uat,
             area_code: country,
         })
@@ -105,7 +106,7 @@ class TestUserMapper(FastTenantTestCase):
         self.assertEqual(self.mapper.sections, {})
         res = self.mapper._get_section(name, code)
         self.assertIsInstance(res, Section)
-        self.assertEqual(self.mapper.sections.keys(), [name])
+        self.assertEqual(list(self.mapper.sections.keys()), [name])
         with schema_context(SCHEMA_NAME):
             self.assertTrue(
                 Section.objects.filter(name=name, code=code).exists()
@@ -497,12 +498,12 @@ class TestUserSynchronizer(FastTenantTestCase):
 
     def test_filter_records_no_key(self):
         """If key is not in the record provided then False"""
-        self.assertFalse(self.synchronizer._filter_records([{}]))
+        self.assertFalse(list(self.synchronizer._filter_records([{}])))
 
     def test_filter_records_staff_email(self):
         """Ensure STAFF_EMAIL has a value"""
         self.record["STAFF_EMAIL"] = ""
-        self.assertFalse(self.synchronizer._filter_records([self.record]))
+        self.assertFalse(list(self.synchronizer._filter_records([self.record])))
 
     def test_filter_records(self):
         self.assertTrue(self.synchronizer._filter_records([self.record]))
@@ -530,4 +531,4 @@ class TestUserSynchronizer(FastTenantTestCase):
         mock_request.get().json.return_value = json.dumps([self.record])
         mock_request.get().status_code = 200
         with patch("users.tasks.requests", mock_request):
-            self.assertEqual(self.synchronizer.response, [self.record])
+            self.assertEqual(list(self.synchronizer.response), [self.record])

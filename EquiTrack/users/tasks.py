@@ -7,9 +7,11 @@ from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.utils import six
 
 import requests
 from celery.utils.log import get_task_logger
+from django.utils.six import iteritems
 
 from EquiTrack.celery import app
 from users.models import Country, Section, User, UserProfile
@@ -151,7 +153,7 @@ class UserMapper(object):
             logger.info('Group added to user {}'.format(user))
 
         # most attributes are direct maps.
-        for attr, attr_val in ad_user.iteritems():
+        for attr, attr_val in six.iteritems(ad_user):
 
             if hasattr(user, self.ATTR_MAP.get(attr, 'unusable_attr')):
                 u_modified = self._set_attribute(
@@ -236,7 +238,7 @@ def sync_users_remote():
     with storage.open('saml/etools.dat') as csvfile:
         reader = csv.DictReader(csvfile, delimiter='|')
         for row in reader:
-            uni_row = {unicode(key, 'latin-1'): unicode(value, 'latin-1') for key, value in row.iteritems()}
+            uni_row = {key.decode('latin-1'): value.decode('latin-1') for key, value in iteritems(row)}
             user_sync.create_or_update_user(uni_row)
 
 
@@ -249,8 +251,8 @@ def sync_users():
     try:
         sync_users_remote()
     except Exception as e:
-        log.exception_message = e.message
-        raise VisionException(message=e.message)
+        log.exception_message = e.args[0]
+        raise VisionException(message=e.args[0])
     finally:
         log.save()
 
@@ -265,8 +267,8 @@ def map_users():
         user_sync = UserMapper()
         user_sync.map_users()
     except Exception as e:
-        log.exception_message = e.message
-        raise VisionException(message=e.message)
+        log.exception_message = e.args[0]
+        raise VisionException(message=e.args[0])
     finally:
         log.save()
 
@@ -281,7 +283,7 @@ def sync_users_local(n=20):
             i += 1
             if i == n:
                 break
-            uni_row = {unicode(key, 'latin-1'): unicode(value, 'latin-1') for key, value in row.iteritems()}
+            uni_row = {key.decode('latin-1'): value.decode('latin-1') for key, value in iteritems(row)}
             user_sync.create_or_update_user(uni_row)
 
 

@@ -45,11 +45,11 @@ def set_current_path_in_dict(r, path, next_value, end=False):
         # we have to append to previous path
         pth = form_path_from_list(path, list=True)
         exec_str = 'r' + pth
-        exec exec_str in globals(), locals()
+        exec(exec_str, globals(), locals())
     else:
         pth = form_path_from_list(path)
         exec_str = 'r' + pth + ' = ' + next_value
-        exec exec_str in globals(), locals()
+        exec(exec_str, globals(), locals())
     return r
 
 
@@ -57,7 +57,7 @@ def path_in_dict_exists(r, pth):
 
     try:
         exec_str = 'r' + pth
-        exec exec_str in globals(), locals()
+        exec(exec_str, globals(), locals())
     except Exception as e:
         return False
     return True
@@ -90,6 +90,7 @@ def parse_multipart_data(myd):
         return r
 
     for k in lok:
+        k = list(k)
         i = 0
         parcurs = []
         if i >= len(k) - 1:
@@ -103,12 +104,12 @@ def parse_multipart_data(myd):
                     parcurs.append(k[i + 1])
                     pth = form_path_from_list(parcurs)
                     exec_str = 'r' + pth + ' = ' + 'myd[form_myd_path(parcurs)]'
-                    exec exec_str in globals(), locals()
+                    exec(exec_str, globals(), locals())
                 else:
                     pth = form_path_from_list(parcurs)
                     parcurs.append(k[i + 1])
                     exec_str = 'r' + pth + '.append(myd[form_myd_path(parcurs)])'
-                    exec exec_str in globals(), locals()
+                    exec(exec_str, globals(), locals())
             i += 1
 
     return r

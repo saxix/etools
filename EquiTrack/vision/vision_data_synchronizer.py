@@ -130,8 +130,8 @@ class VisionDataSynchronizer(object):
 
             log.successful = True
         except Exception as e:
-            log.exception_message = e.message
-            raise VisionException(message=e.message).with_traceback(sys.exc_info()[2])
+            log.exception_message = e.args[0]
+            raise VisionException(message=e.args[0]).with_traceback(sys.exc_info()[2])
 
         finally:
             log.save()

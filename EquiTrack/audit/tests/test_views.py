@@ -4,6 +4,7 @@ import datetime
 import random
 
 from django.core.management import call_command
+from django.utils import six
 from rest_framework import status
 from mock import patch, Mock
 
@@ -368,7 +369,7 @@ class TestEngagementsCreateViewSet(EngagementTransitionsTestCaseMixin, APITenant
 
         response = self._do_create(self.unicef_focal_point, self.create_data)
 
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('active_pd', response.data)
 
     def test_partner_with_active_pd(self):
@@ -377,7 +378,7 @@ class TestEngagementsCreateViewSet(EngagementTransitionsTestCaseMixin, APITenant
 
         response = self._do_create(self.unicef_focal_point, self.create_data)
 
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_government_partner_without_active_pd(self):
         self.engagement.partner.partner_type = PartnerType.GOVERNMENT
@@ -386,7 +387,7 @@ class TestEngagementsCreateViewSet(EngagementTransitionsTestCaseMixin, APITenant
 
         response = self._do_create(self.unicef_focal_point, self.create_data)
 
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 class TestEngagementsUpdateViewSet(EngagementTransitionsTestCaseMixin, APITenantTestCase):
@@ -433,7 +434,8 @@ class TestEngagementsUpdateViewSet(EngagementTransitionsTestCaseMixin, APITenant
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
+        six.assertCountEqual(
+            self,
             map(lambda pd: pd['id'], response.data['active_pd']),
             map(lambda i: i.id, partner.agreements.first().interventions.all())
         )
@@ -458,7 +460,8 @@ class TestAuditorFirmViewSet(AuditTestCaseMixin, APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
+        six.assertCountEqual(
+            self,
             map(lambda x: x['id'], response.data['results']),
             map(lambda x: x.id, expected_firms)
         )

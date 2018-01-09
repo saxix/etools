@@ -214,7 +214,7 @@ class KeyInternalWeaknessSerializer(BaseAggregatedRiskRootSerializer):
 
     @staticmethod
     def _get_bluerprint_count_by_risk_value(category, field_name, risk_value):
-        values_count = len(filter(lambda b: b._risk and b._risk.value == risk_value, category.blueprints.all()))
+        values_count = len(list(filter(lambda b: b._risk and b._risk.value == risk_value, category.blueprints.all())))
         setattr(category, field_name, values_count)
 
         for child in category.children.all():
@@ -288,16 +288,20 @@ class AggregatedRiskRootSerializer(BaseAggregatedRiskRootSerializer):
             category.blueprint_count += child.blueprint_count
 
         category.applicable_questions = len(
-            filter(
-                lambda b: not b._risk or b._risk.risk_point, category.blueprints.all()
+            list(
+                filter(
+                    lambda b: not b._risk or b._risk.risk_point, category.blueprints.all()
+                )
             )
         )
         for child in category.children.all():
             category.applicable_questions += child.applicable_questions
 
         category.applicable_key_questions = len(
-            filter(
-                lambda b: b.is_key and (not b._risk or b._risk.risk_point), category.blueprints.all()
+            list(
+                filter(
+                    lambda b: b.is_key and (not b._risk or b._risk.risk_point), category.blueprints.all()
+                )
             )
         )
         for child in category.children.all():

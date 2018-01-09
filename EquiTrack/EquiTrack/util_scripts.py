@@ -10,6 +10,7 @@ from django.contrib.auth.models import Group
 from django.db import connection
 from django.db.models import Count
 from django.contrib.auth import get_user_model
+from django.utils.six import text_type
 
 from partners.models import (
     Agreement, Assessment, FundingCommitment, Intervention, InterventionPlannedVisits, PartnerOrganization,
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def printtf(*args):
     file_name = 'mylogs.txt'
-    args_list = [unicode(arg) for arg in args]
+    args_list = [text_type(arg) for arg in args]
     logger.info(args_list)
     with open(file_name, 'ab') as f:
         f.write(', '.join(args_list))

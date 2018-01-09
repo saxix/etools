@@ -34,5 +34,5 @@ class VendorNumbers(APITenantTestCase):
 
         with self.assertNumQueries(2):
             response = self.forced_auth_req('get', reverse('t2f:vendor_numbers'), user=self.unicef_staff)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertEqual(len(response_json), 6)

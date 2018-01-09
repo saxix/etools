@@ -18,7 +18,7 @@ def migrate_planned_budget(apps, schema_editor):
 
     local_currency = current_workspace.local_currency
     interventions = Intervention.objects.all()
-    print("Total interventions {}".format(interventions.count()))
+    print(("Total interventions {}".format(interventions.count())))
     count = 0
     for i in interventions:
         if i.planned_budget.exists():
@@ -60,7 +60,7 @@ def migrate_planned_budget(apps, schema_editor):
             )
             new_planned_budget.save()
 
-        print('Updated automatically {}'.format(count))
+        print(('Updated automatically {}'.format(count)))
 
 
 class Migration(migrations.Migration):

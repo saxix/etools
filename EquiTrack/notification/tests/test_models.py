@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import sys
 from unittest import skipIf
 
+from django.utils.six import text_type
+
 from EquiTrack.factories import AgreementFactory, NotificationFactory, PartnerFactory
 from EquiTrack.tests.mixins import FastTenantTestCase
 
@@ -16,13 +18,13 @@ class TestStrUnicode(FastTenantTestCase):
         self.assertIn(b'Email Notification from', str(notification))
         self.assertIn(b'for xyz', str(notification))
 
-        self.assertIn(u'Email Notification from', unicode(notification))
-        self.assertIn(u'for xyz', unicode(notification))
+        self.assertIn(u'Email Notification from', text_type(notification))
+        self.assertIn(u'for xyz', text_type(notification))
 
         agreement = AgreementFactory(partner=PartnerFactory(name=u'R\xe4dda Barnen'))
         notification = NotificationFactory(sender=agreement)
         self.assertIn(b'Email Notification from', str(notification))
         self.assertIn(b'for R\xc3\xa4dda Barnen', str(notification))
 
-        self.assertIn(u'Email Notification from', unicode(notification))
-        self.assertIn(u'for R\xe4dda Barnen', unicode(notification))
+        self.assertIn(u'Email Notification from', text_type(notification))
+        self.assertIn(u'for R\xe4dda Barnen', text_type(notification))

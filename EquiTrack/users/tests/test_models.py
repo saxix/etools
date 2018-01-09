@@ -8,6 +8,12 @@ from EquiTrack.tests.mixins import FastTenantTestCase as TenantTestCase
 from users import models
 
 
+try:
+    unicode
+except NameError:
+    from django.utils.six import text_type as unicode
+
+
 class TestWorkspaceCounter(TenantTestCase):
     def setUp(self):
         super(TestWorkspaceCounter, self).setUp()

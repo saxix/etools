@@ -7,6 +7,7 @@ from unittest import skip, TestCase
 from django.contrib.auth.models import Group
 from django.core.urlresolvers import reverse, resolve
 from django.db import connection
+from django.utils import six
 from django.utils import timezone
 
 from rest_framework import status
@@ -104,7 +105,7 @@ class TestInterventionsAPI(APITenantTestCase):
             user=user or self.unicef_staff,
             data=data
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def run_request_list_dash_ep(self, data={}, user=None, method='get'):
         response = self.forced_auth_req(
@@ -112,7 +113,7 @@ class TestInterventionsAPI(APITenantTestCase):
             reverse('partners_api:intervention-list-dash'),
             user=user or self.unicef_staff,
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def run_request(self, intervention_id, data=None, method='get', user=None):
         user = user or self.partnership_manager_user
@@ -122,7 +123,7 @@ class TestInterventionsAPI(APITenantTestCase):
             user=user,
             data=data or {}
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def test_api_pd_output_not_populated(self):
         self.assertFalse(Activity.objects.exists())
@@ -144,7 +145,7 @@ class TestInterventionsAPI(APITenantTestCase):
             data=data
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        result = json.loads(response.rendered_content)
+        result = json.loads(response.rendered_content.decode('utf-8'))
         self.assertEqual(result.get('result_links'), {'name': ['This field may not be null.']})
         self.assertEqual(
             Activity.objects.filter(action=Activity.UPDATE).count(),
@@ -194,7 +195,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request_list_ep(data, user=self.partnership_manager_user)
 
         self.assertEqual(status_code, status.HTTP_201_CREATED)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(
             Activity.objects.filter(action=Activity.CREATE).count(),
             1
@@ -214,7 +215,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request_list_ep(data, user=self.partnership_manager_user)
 
         self.assertEqual(status_code, status.HTTP_201_CREATED)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(
             Activity.objects.filter(action=Activity.CREATE).count(),
             1
@@ -234,7 +235,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request_list_ep(data, user=self.partnership_manager_user)
 
         self.assertEqual(status_code, status.HTTP_201_CREATED)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(response['frs_details']['total_actual_amt'],
                          float(sum([self.fr_1.actual_amt, self.fr_2.actual_amt])))
         self.assertEqual(response['frs_details']['total_outstanding_amt'],
@@ -257,7 +258,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request(self.intervention_2.id, data, method='patch')
 
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(response['frs_details']['total_actual_amt'],
                          float(sum([self.fr_1.actual_amt, self.fr_2.actual_amt])))
         self.assertEqual(response['frs_details']['total_outstanding_amt'],
@@ -273,7 +274,7 @@ class TestInterventionsAPI(APITenantTestCase):
         self.assertIn("frs", activity.change)
         frs = activity.change["frs"]
         self.assertEqual(frs["before"], [])
-        self.assertItemsEqual(frs["after"], [self.fr_1.pk, self.fr_2.pk])
+        six.assertCountEqual(self, frs["after"], [self.fr_1.pk, self.fr_2.pk])
         self.assertEqual(activity.by_user, self.partnership_manager_user)
 
     def test_remove_an_fr_from_pd(self):
@@ -285,7 +286,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request(self.intervention_2.id, data, method='patch')
 
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(
             Activity.objects.filter(action=Activity.UPDATE).count(),
             1
@@ -299,7 +300,7 @@ class TestInterventionsAPI(APITenantTestCase):
         status_code, response = self.run_request(self.intervention_2.id, data, method='patch')
 
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(
             Activity.objects.filter(action=Activity.UPDATE).count(),
             2
@@ -318,7 +319,7 @@ class TestInterventionsAPI(APITenantTestCase):
                                                  user=self.partnership_manager_user)
 
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertTrue(Activity.objects.exists())
 
     def test_fail_add_used_fr_on_pd(self):
@@ -346,12 +347,12 @@ class TestInterventionsAPI(APITenantTestCase):
         }
         status_code, response = self.run_request(self.intervention_2.id, data, method='patch')
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertTrue(Activity.objects.exists())
 
         status_code, response = self.run_request(self.intervention_2.id, data, method='patch')
         self.assertEqual(status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(response['frs'], frs_data)
+        six.assertCountEqual(self, response['frs'], frs_data)
         self.assertEqual(Activity.objects.all().count(), 2)
 
     def test_patch_title_fail_as_unicef_user(self):
@@ -373,7 +374,7 @@ class TestInterventionsAPI(APITenantTestCase):
         self.assertEqual(status_code, status.HTTP_200_OK)
 
         # all fields are there
-        self.assertItemsEqual(self.ALL_FIELDS, response['permissions']['edit'].keys())
+        six.assertCountEqual(self, self.ALL_FIELDS, response['permissions']['edit'].keys())
         edit_permissions = response['permissions']['edit']
         required_permissions = response['permissions']['required']
 
@@ -382,10 +383,10 @@ class TestInterventionsAPI(APITenantTestCase):
         del edit_permissions["sector_locations"]
         del required_permissions["sector_locations"]
 
-        self.assertItemsEqual(self.EDITABLE_FIELDS['draft'],
-                              [perm for perm in edit_permissions if edit_permissions[perm]])
-        self.assertItemsEqual(self.REQUIRED_FIELDS['draft'],
-                              [perm for perm in required_permissions if required_permissions[perm]])
+        six.assertCountEqual(self, self.EDITABLE_FIELDS['draft'],
+                             [perm for perm in edit_permissions if edit_permissions[perm]])
+        six.assertCountEqual(self, self.REQUIRED_FIELDS['draft'],
+                             [perm for perm in required_permissions if required_permissions[perm]])
 
     @skip('add test after permissions file is ready')
     def test_permissions_for_intervention_status_active(self):
@@ -397,13 +398,13 @@ class TestInterventionsAPI(APITenantTestCase):
         self.assertEqual(status_code, status.HTTP_200_OK)
 
         # all fields are there
-        self.assertItemsEqual(self.ALL_FIELDS, response['permissions']['edit'].keys())
+        six.assertCountEqual(self, self.ALL_FIELDS, response['permissions']['edit'].keys())
         edit_permissions = response['permissions']['edit']
         required_permissions = response['permissions']['required']
-        self.assertItemsEqual(self.EDITABLE_FIELDS['signed'],
-                              [perm for perm in edit_permissions if edit_permissions[perm]])
-        self.assertItemsEqual(self.REQUIRED_FIELDS['signed'],
-                              [perm for perm in required_permissions if required_permissions[perm]])
+        six.assertCountEqual(self, self.EDITABLE_FIELDS['signed'],
+                             [perm for perm in edit_permissions if edit_permissions[perm]])
+        six.assertCountEqual(self, self.REQUIRED_FIELDS['signed'],
+                             [perm for perm in required_permissions if required_permissions[perm]])
 
     def test_list_interventions(self):
         EXPECTED_QUERIES = 11
@@ -504,8 +505,8 @@ class TestAPIInterventionResultLinkListView(APITenantTestCase):
         if expected_keys is None:
             expected_keys = self.expected_field_names
 
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 2)
         for obj in response_json:
@@ -522,7 +523,7 @@ class TestAPIInterventionResultLinkListView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -530,7 +531,7 @@ class TestAPIInterventionResultLinkListView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url)
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_ok(self):
         '''Ensure a staff user has access'''
@@ -541,7 +542,7 @@ class TestAPIInterventionResultLinkListView(APITenantTestCase):
         '''A non-staff user has read access if in the correct group'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -569,15 +570,15 @@ class TestAPIInterventionResultLinkCreateView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
         self.assertIn('id', response_json.keys())
 
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -585,13 +586,13 @@ class TestAPIInterventionResultLinkCreateView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.post(self.url, data=self.data, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission_non_staff(self):
         '''Ensure group membership is sufficient for create; even non-staff group members can create'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -625,15 +626,15 @@ class TestAPIInterventionResultLinkRetrieveView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
         self.assertEqual(self.expected_keys, sorted(response_json.keys()))
 
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -641,7 +642,7 @@ class TestAPIInterventionResultLinkRetrieveView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_ok(self):
         '''Ensure a staff user can access'''
@@ -652,7 +653,7 @@ class TestAPIInterventionResultLinkRetrieveView(APITenantTestCase):
         '''Ensure group membership is sufficient for retrieval; even non-staff group members can retrieve'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -678,14 +679,14 @@ class TestAPIInterventionResultLinkUpdateView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         intervention_result_link = InterventionResultLink.objects.get(pk=self.intervention_result_link.id)
         self.assertEqual(intervention_result_link.cp_output.id, self.new_cp_output.id)
 
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -693,18 +694,18 @@ class TestAPIInterventionResultLinkUpdateView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.patch(self.url, data=self.data, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_refused(self):
         '''Ensure a staff doesn't have write access'''
         response = self._make_request(UserFactory(is_staff=True))
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission_non_staff(self):
         '''Ensure group membership is sufficient for update; even non-staff group members can update'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -726,13 +727,13 @@ class TestAPIInterventionResultLinkDeleteView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(InterventionResultLink.objects.filter(pk=self.intervention_result_link.id).exists())
 
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -740,18 +741,18 @@ class TestAPIInterventionResultLinkDeleteView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.patch(self.url, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_refused(self):
         '''Ensure a staff doesn't have write access'''
         response = self._make_request(UserFactory(is_staff=True))
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission_non_staff(self):
         '''Ensure group membership is sufficient for update; even non-staff group members can update'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -791,8 +792,8 @@ class TestAPIInterventionLowerResultListView(APITenantTestCase):
         if expected_keys is None:
             expected_keys = self.expected_field_names
 
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 2)
         for obj in response_json:
@@ -809,7 +810,7 @@ class TestAPIInterventionLowerResultListView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -817,7 +818,7 @@ class TestAPIInterventionLowerResultListView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url)
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_ok(self):
         '''Ensure a staff user has access'''
@@ -828,7 +829,7 @@ class TestAPIInterventionLowerResultListView(APITenantTestCase):
         '''A non-staff user has read access if in the correct group'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -858,8 +859,8 @@ class TestAPIInterventionLowerResultCreateView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
         self.assertIn('id', response_json.keys())
         # The id of the newly-created lower result should be associated with my result link, and it should be
@@ -873,7 +874,7 @@ class TestAPIInterventionLowerResultCreateView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -881,13 +882,13 @@ class TestAPIInterventionLowerResultCreateView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.post(self.url, data=self.data, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission_non_staff(self):
         '''Ensure group membership is sufficient for create; even non-staff group members can create'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -945,8 +946,8 @@ class TestAPIInterventionIndicatorsListView(APITenantTestCase):
         if expected_keys is None:
             expected_keys = self.expected_field_names
 
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 2)
         for obj in response_json:
@@ -963,7 +964,7 @@ class TestAPIInterventionIndicatorsListView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -971,7 +972,7 @@ class TestAPIInterventionIndicatorsListView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url)
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_access_ok(self):
         '''Ensure a staff user has access'''
@@ -982,7 +983,7 @@ class TestAPIInterventionIndicatorsListView(APITenantTestCase):
         '''A non-staff user has read access if in the correct group'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -1022,8 +1023,8 @@ class TestAPInterventionIndicatorsCreateView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
         self.assertIn('id', response_json.keys())
         # The id of the newly-created indicator should be associated with my lower result, and it should be
@@ -1037,7 +1038,7 @@ class TestAPInterventionIndicatorsCreateView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self._make_request(UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -1045,13 +1046,13 @@ class TestAPInterventionIndicatorsCreateView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.post(self.url, data=self.data, format='json')
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission_non_staff(self):
         '''Ensure group membership is sufficient for create; even non-staff group members can create'''
         user = UserFactory()
         response = self._make_request(user)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         _add_user_to_partnership_manager_group(user)
 
@@ -1073,9 +1074,9 @@ class TestAPInterventionIndicatorsCreateView(APITenantTestCase):
 
         response = self._make_request(user, data)
         # Adding the same indicator again should fail.
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
-        response_json = json.loads(response.rendered_content)
-        self.assertEqual(response_json.keys(), ['non_field_errors'])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
+        self.assertEqual(list(response_json.keys()), ['non_field_errors'])
         self.assertIsInstance(response_json['non_field_errors'], list)
         self.assertEqual(response_json['non_field_errors'],
                          ['This indicator is already being monitored for this Result'])
@@ -1182,8 +1183,8 @@ class TestInterventionResultListAPIView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         first = response_json[0]
@@ -1197,8 +1198,8 @@ class TestInterventionResultListAPIView(APITenantTestCase):
             user=self.unicef_staff,
             data={"search": "random"}
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertFalse(response_json)
 
@@ -1248,8 +1249,8 @@ class TestInterventionIndicatorListAPIView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         first = response_json[0]
@@ -1273,8 +1274,8 @@ class TestInterventionIndicatorListAPIView(APITenantTestCase):
             user=self.unicef_staff,
             data={"search": "random"}
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertFalse(response_json)
 
@@ -1335,8 +1336,8 @@ class TestInterventionAmendmentListAPIView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         first = response_json[0]
@@ -1371,8 +1372,8 @@ class TestInterventionAmendmentListAPIView(APITenantTestCase):
             user=self.unicef_staff,
             data={"search": "random"}
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertFalse(response_json)
 
@@ -1436,8 +1437,8 @@ class TestInterventionSectorLocationLinkListAPIView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         first = response_json[0]
@@ -1471,8 +1472,8 @@ class TestInterventionSectorLocationLinkListAPIView(APITenantTestCase):
             user=self.unicef_staff,
             data={"search": "random"}
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertFalse(response_json)
 
@@ -1486,8 +1487,8 @@ class TestInterventionListMapView(APITenantTestCase):
 
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response.'''
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         first = response_json[0]

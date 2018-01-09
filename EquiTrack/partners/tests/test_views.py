@@ -5,13 +5,13 @@ import datetime
 from decimal import Decimal
 import json
 from unittest import skip, TestCase
-from urlparse import urlparse
 
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse, resolve
 from django.db import connection
+from django.utils import six
 from django.utils import timezone
 
 from model_utils import Choices
@@ -151,7 +151,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
             expected_keys = self.normal_field_names
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 1)
         self.assertIsInstance(response_json[0], dict)
@@ -168,7 +168,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self.forced_auth_req('get', self.url, user=UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_forbidden(self):
         '''Ensure an unauthenticated user gets the 403 smackdown'''
@@ -176,7 +176,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url)
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_permission(self):
         '''Ensure a non-staff user in the correct group has access'''
@@ -234,7 +234,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
         response = self.forced_auth_req('get', self.url, data=params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 0)
 
@@ -265,7 +265,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
         response = self.forced_auth_req('get', self.url, data={"values": "{},{},{}".format(p1.id, p2.id, unused_id)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, list)
         self.assertEqual(len(response_json), 2)
         ids_in_response = []
@@ -273,7 +273,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
             self.assertIsInstance(list_element, dict)
             ids_in_response.append(list_element.get('id'))
 
-        self.assertItemsEqual(ids_in_response, (p1.id, p2.id))
+        six.assertCountEqual(self, ids_in_response, (p1.id, p2.id))
 
     def test_values_negative(self):
         '''Ensure that garbage values are handled properly'''
@@ -323,13 +323,13 @@ class TestPartnerOrganizationListViewForCSV(APITenantTestCase):
         # but I want to make sure the response looks CSV-ish.
         self.assertEqual(response.get('Content-Disposition'), 'attachment;filename=partner.csv')
 
-        self.assertIsInstance(response.rendered_content, basestring)
+        self.assertIsInstance(response.rendered_content, six.binary_type)
 
         # The response should *not* look like JSON.
         with self.assertRaises(ValueError):
-            json.loads(response.rendered_content)
+            json.loads(response.rendered_content.decode('utf-8'))
 
-        lines = response.rendered_content.replace('\r\n', '\n').split('\n')
+        lines = response.rendered_content.decode('utf-8').replace('\r\n', '\n').split('\n')
         # Try to read it with Python's CSV reader.
         reader = csv.DictReader(lines)
 
@@ -359,7 +359,7 @@ class TestPartnerOrganizationCreateView(APITenantTestCase):
     def assertResponseFundamentals(self, response):
         '''Assert common fundamentals about the response. Return the id of the new object.'''
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
         self.assertIn('id', response_json.keys())
 
@@ -671,10 +671,17 @@ class TestPartnerOrganizationRetrieveUpdateDeleteViews(APITenantTestCase):
         self.assertIn("vendor_number", response.data.keys())
         self.assertIn("address", response.data.keys())
         self.assertIn("Partner", response.data["name"])
-        self.assertEqual(['programme_visits', 'spot_checks'], response.data["hact_min_requirements"].keys())
-        self.assertEqual(['audits_done', 'planned_visits', 'spot_checks', 'programmatic_visits', 'follow_up_flags',
-                          'planned_cash_transfer', 'micro_assessment_needed', 'audits_mr'],
-                         response.data["hact_values"].keys())
+        self.assertEqual(['programme_visits', 'spot_checks'], sorted(response.data["hact_min_requirements"].keys()))
+        self.assertEqual(['audits_done',
+                          'audits_mr',
+                          'follow_up_flags',
+                          'micro_assessment_needed',
+                          'planned_cash_transfer',
+                          'planned_visits',
+                          'programmatic_visits',
+                          'spot_checks',
+                          ],
+                         sorted(response.data["hact_values"].keys()))
         self.assertEqual(response.data['interventions'], [])
 
     def test_api_partners_retreive_actual_fr_amounts(self):
@@ -850,7 +857,7 @@ class TestAgreementCreateAPIView(APITenantTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.assertIsInstance(response.data, dict)
-        self.assertEqual(response.data.keys(), ['country_programme'])
+        self.assertEqual(list(response.data.keys()), ['country_programme'])
         self.assertIsInstance(response.data['country_programme'], list)
         self.assertEqual(response.data['country_programme'][0], 'Country Programme is required for PCAs!')
 
@@ -880,7 +887,7 @@ class TestAgreementAPIFileAttachments(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIsInstance(response_json, dict)
 
         return response_json
@@ -906,7 +913,7 @@ class TestAgreementAPIFileAttachments(APITenantTestCase):
         # url is a URL like this one --
         # http://testserver/media/test/file_attachments/partner_organization/934/agreements/PCA2017841/foo.txt
 
-        url = urlparse(url)
+        url = six.moves.urllib_parse.urlparse(url)
         self.assertIn(url.scheme, ('http', 'https'))
         self.assertEqual(url.netloc, 'testserver')
 
@@ -947,7 +954,7 @@ class TestAgreementAPIFileAttachments(APITenantTestCase):
         # url looks something like this --
         # http://testserver/media/test/file_attachments/partner_org/1658/agreements/MOU20171421/amendments/tmp02/goodbye_world.txt
 
-        url = urlparse(url)
+        url = six.moves.urllib_parse.urlparse(url)
         self.assertIn(url.scheme, ('http', 'https'))
         self.assertEqual(url.netloc, 'testserver')
 
@@ -1036,7 +1043,7 @@ class TestAgreementAPIView(APITenantTestCase):
             user=self.partner_staff_user,
             data=data
         )
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         for r in response_json:
             self.assertEqual(r['end'], self.country_programme.to_date.isoformat())
@@ -1049,7 +1056,7 @@ class TestAgreementAPIView(APITenantTestCase):
             user=self.partner_staff_user,
             data=data
         )
-        response_json = json.loads(response.rendered_content)
+        response_json = json.loads(response.rendered_content.decode('utf-8'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         for r in response_json:
             self.assertEqual(r['end'], self.country_programme.to_date.isoformat())
@@ -1326,7 +1333,7 @@ class TestPartnerStaffMemberAPIView(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.rendered_content)
+        data = json.loads(response.rendered_content.decode('utf-8'))
         self.assertIn(data[0]["first_name"], self.partner_staff.first_name)
         self.assertIn(data[0]["last_name"], self.partner_staff.last_name)
 
@@ -1486,7 +1493,7 @@ class TestInterventionViews(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0].keys(), ["id", "title"])
+        self.assertEqual(list(response.data[0].keys()), ["id", "title"])
 
     def test_intervention_create(self):
         data = {
@@ -1539,10 +1546,10 @@ class TestInterventionViews(APITenantTestCase):
             ),
             user=self.unicef_staff,
         )
-        r_data = json.loads(response.rendered_content)
+        r_data = json.loads(response.rendered_content.decode('utf-8'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(r_data["frs_details"]['frs']), 2)
-        self.assertItemsEqual(r_data["frs"], [self.fr_header_2.id, self.fr_header_1.id])
+        six.assertCountEqual(self, r_data["frs"], [self.fr_header_2.id, self.fr_header_1.id])
 
     def test_intervention_active_update_population_focus(self):
         intervention_obj = Intervention.objects.get(id=self.intervention_data["id"])
@@ -1809,7 +1816,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
     def test_list(self):
         response = self.forced_auth_req('get', self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(len(data), self.num_periods)
         # check that our keys match our expectation
         self.assertEqual(set(data[0]), {'id', 'start_date', 'end_date', 'due_date', 'intervention'})
@@ -1819,14 +1826,14 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
         InterventionReportingPeriod.objects.all().delete()
         response = self.forced_auth_req('get', self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(data, [])
 
     def test_list_only_our_intervention_periods(self):
         other_intervention = InterventionReportingPeriodFactory()
         response = self.forced_auth_req('get', self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         # only ``num_periods`` items are retrieved ...
         self.assertEqual(len(data), self.num_periods)
         for period in data:
@@ -1840,7 +1847,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
         InterventionReportingPeriod.objects.all().delete()
         response = self.forced_auth_req('post', self.list_url, data=self.params)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         for key in ['start_date', 'end_date', 'due_date', 'intervention']:
             self.assertEqual(str(data[key]), str(self.params[key]))
 
@@ -1848,7 +1855,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
         params = {}
         response = self.forced_auth_req('post', self.list_url, data=params)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         for key in ['start_date', 'end_date', 'due_date', 'intervention']:
             self.assertEqual(data[key], ["This field is required."])
 
@@ -1941,7 +1948,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
     def test_get(self):
         response = self.forced_auth_req('get', self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(set(data.keys()),
                          {'id', 'intervention', 'start_date', 'end_date', 'due_date'})
 
@@ -1960,7 +1967,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
         }
         response = self.forced_auth_req('patch', self.detail_url, data=params)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(data['due_date'], str(params['due_date']))
 
     def test_patch_change_multiple_fields(self):
@@ -1970,7 +1977,7 @@ class TestInterventionReportingPeriodViews(APITenantTestCase):
         }
         response = self.forced_auth_req('patch', self.detail_url, data=params)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = json.loads(response.content)
+        data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(data['end_date'], str(params['end_date']))
         self.assertEqual(data['due_date'], str(params['due_date']))
 

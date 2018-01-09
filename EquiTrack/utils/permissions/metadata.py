@@ -23,7 +23,7 @@ class PermissionsBasedMetadataMixin(object):
         else:
             filtered_fields = map(lambda f: f.field_name, serializer._writable_fields)
 
-        for field_name in info.keys():
+        for field_name in list(info.keys()):
             if field_name not in filtered_fields:
                 del info[field_name]
 

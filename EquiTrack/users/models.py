@@ -8,6 +8,7 @@ from django.contrib.auth.models import Group, User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import connection, models, transaction
 from django.db.models.signals import post_save, pre_delete
+from django.utils import six
 from djangosaml2.signals import pre_user_save
 from tenant_schemas.models import TenantMixin
 
@@ -20,6 +21,7 @@ User._meta.ordering = ['first_name']
 logger = logging.getLogger(__name__)
 
 
+@six.python_2_unicode_compatible
 class Country(TenantMixin):
     """
     Tenant Schema
@@ -66,13 +68,14 @@ class Country(TenantMixin):
     threshold_tre_usd = models.DecimalField(max_digits=20, decimal_places=4, default=None, null=True)
     threshold_tae_usd = models.DecimalField(max_digits=20, decimal_places=4, default=None, null=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
         ordering = ['name']
 
 
+@six.python_2_unicode_compatible
 class WorkspaceCounter(models.Model):
     TRAVEL_REFERENCE = 'travel_reference_number_counter'
     TRAVEL_INVOICE_REFERENCE = 'travel_invoice_reference_number_counter'
@@ -106,7 +109,7 @@ class WorkspaceCounter(models.Model):
         if created:
             cls.objects.create(workspace=instance)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.workspace.name
 
 
@@ -124,6 +127,7 @@ class CountryOfficeManager(models.Manager):
             return super(CountryOfficeManager, self).get_queryset()
 
 
+@six.python_2_unicode_compatible
 class Office(models.Model):
     """
     Represents an office for the country
@@ -141,7 +145,7 @@ class Office(models.Model):
 
     objects = CountryOfficeManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -156,6 +160,7 @@ class CountrySectionManager(models.Manager):
             return super(CountrySectionManager, self).get_queryset()
 
 
+@six.python_2_unicode_compatible
 class Section(models.Model):
     """
     Represents a section for the country
@@ -166,7 +171,7 @@ class Section(models.Model):
 
     objects = CountrySectionManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -175,6 +180,7 @@ class UserProfileManager(models.Manager):
         return super(UserProfileManager, self).get_queryset().select_related('country')
 
 
+@six.python_2_unicode_compatible
 class UserProfile(models.Model):
     """
     Represents a user profile that can have access to many Countries but to one active Country at a time
@@ -231,7 +237,7 @@ class UserProfile(models.Model):
     def last_name(self):
         return self.user.last_name
 
-    def __unicode__(self):
+    def __str__(self):
         return u'User profile for {}'.format(
             self.user.get_full_name()
         )
@@ -353,7 +359,7 @@ def delete_partner_relationship(sender, instance, **kwargs):
             profile.user.is_active = False
             profile.user.save()
     except Exception as exp:
-        logger.exception(u'Exception occurred whilst de-linking partner user: {}'.format(exp.message))
+        logger.exception(u'Exception occurred whilst de-linking partner user: {}'.format(exp))
 
 
 pre_delete.connect(delete_partner_relationship, sender='partners.PartnerStaffMember')

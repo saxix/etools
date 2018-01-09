@@ -5,6 +5,7 @@ import itertools
 from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import F, Sum
+from django.utils import six
 
 from celery.utils.log import get_task_logger
 
@@ -28,9 +29,9 @@ def get_intervention_context(intervention):
     Helper function for some of the notification tasks in this file.
     '''
     return {
-        'number': unicode(intervention),
+        'number': six.text_type(intervention),
         'partner': intervention.agreement.partner.name,
-        'start_date': str(intervention.start),
+        'start_date': six.text_type(intervention.start),
         'url': 'https://{}/pmp/interventions/{}/details'.format(settings.HOST, intervention.id),
         'unicef_focal_points': [focal_point.email for focal_point in intervention.unicef_focal_points.all()]
     }

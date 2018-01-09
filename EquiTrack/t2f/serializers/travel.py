@@ -10,6 +10,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.query_utils import Q
 from django.utils.functional import cached_property
 from django.utils.itercompat import is_iterable
+from django.utils import six
 from django.utils.translation import ugettext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -121,7 +122,7 @@ class ActionPointSerializer(serializers.ModelSerializer):
     def validate_status(self, value):
         statuses = dict(ActionPoint.STATUS).keys()
         if value not in statuses:
-            raise ValidationError('Invalid status. Possible choices: {}'.format(', '.join(statuses)))
+            raise ValidationError('Invalid status. Possible choices: {}'.format(', '.join(sorted(statuses))))
         return value
 
 
@@ -290,7 +291,7 @@ class TravelDetailsSerializer(PermissionBasedModelSerializer):
         # Check date integrity
         dates_iterator = chain.from_iterable((i['departure_date'], i['arrival_date']) for i in value)
 
-        current_date = dates_iterator.next()
+        current_date = six.next(dates_iterator)
         for date in dates_iterator:
             if date is None:
                 continue
@@ -407,7 +408,7 @@ class TravelDetailsSerializer(PermissionBasedModelSerializer):
         new_models = []
         for data in related_data:
             data = dict(data)
-            m2m_fields = {k: data.pop(k, []) for k in data.keys()
+            m2m_fields = {k: data.pop(k, []) for k in list(data.keys())
                           if isinstance(model._meta.get_field(k), ManyToManyField)}
             data.update(kwargs)
 
@@ -448,7 +449,7 @@ class TravelDetailsSerializer(PermissionBasedModelSerializer):
         return instance
 
     def update_object(self, obj, data):
-        m2m_fields = {k: data.pop(k, []) for k in data.keys()
+        m2m_fields = {k: data.pop(k, []) for k in list(data.keys())
                       if isinstance(obj._meta.get_field(k), ManyToManyField)}
         for attr, value in data.items():
             setattr(obj, attr, value)

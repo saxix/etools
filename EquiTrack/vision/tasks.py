@@ -76,7 +76,7 @@ def cost_assignment_sync(country_name=None):
 
         except VisionException as e:
             logger.error(u"{} sync failed, Reason: {}".format(
-                CostAssignmentSynch.__name__, e.message
+                CostAssignmentSynch.__name__, e.args[0]
             ))
         processed.append(country)
 
@@ -128,7 +128,7 @@ def sync_handler(country_name, handler):
 
         except VisionException as e:
             logger.error(u"{} sync failed, Reason: {}, Country: {}".format(
-                handler.__name__, e.message, country_name
+                handler.__name__, e.args[0], country_name
             ))
 
 
@@ -154,7 +154,7 @@ def sync(country_name=None, synchronizers=None):
 
         except VisionException as e:
             logger.error(u"{} sync failed, Reason: {}".format(
-                handler.__name__, e.message
+                handler.__name__, e.args[0]
             ))
 
     for country in countries:
@@ -169,7 +169,7 @@ def sync(country_name=None, synchronizers=None):
 
             except VisionException as e:
                 logger.error(u"{} sync failed, Reason: {}".format(
-                    handler.__name__, e.message
+                    handler.__name__, e.args[0]
                 ))
         country.vision_last_synced = datetime.datetime.now()
         country.save()
@@ -242,5 +242,5 @@ def update_purchase_orders(country_name=None):
             logger.info(u"Update finished successfully for {}".format(country.name))
         except VisionException as e:
                 logger.error(u"{} sync failed, Reason: {}".format(
-                    POSynchronizer.__name__, e.message
+                    POSynchronizer.__name__, e.args[0]
                 ))

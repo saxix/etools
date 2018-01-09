@@ -4,6 +4,12 @@ from users.models import Country
 from publics.models import Currency
 
 
+try:
+    unicode
+except NameError:
+    from django.utils.six import text_type as unicode
+
+
 class Command(BaseCommand):
     help = 'Create a new country and related schema'
 
@@ -22,4 +28,4 @@ class Command(BaseCommand):
                 local_currency=usd,
             )
         except Exception as exp:
-            raise CommandError(exp.message)
+            raise CommandError(exp.args[0])

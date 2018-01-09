@@ -192,7 +192,10 @@ class APITenantTestCase(FastTenantTestCase):
             response = view(request, *view_info.args, **view_info.kwargs)
 
         if hasattr(response, 'render'):
-            response.render()
+            try:
+                response.render()
+            except TypeError:
+                pass
 
         return response
 
