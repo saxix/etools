@@ -22,7 +22,7 @@ from model_utils.models import (
 from model_utils import Choices, FieldTracker
 from dateutil.relativedelta import relativedelta
 
-from EquiTrack.utils import import_permissions
+from EquiTrack.utils import import_permissions, get_current_year
 from EquiTrack.mixins import AdminURLMixin
 from environment.helpers import tenant_switch_is_active
 from funds.models import Grant
@@ -40,10 +40,6 @@ from partners.validation.agreements import (
     agreements_illegal_transition,
     agreement_transition_to_signed_valid)
 from partners.validation import interventions as intervention_validation
-
-
-def get_current_year():
-    return datetime.datetime.now().year
 
 
 def _get_partner_base_path(partner):
@@ -492,7 +488,7 @@ class PartnerOrganization(AdminURLMixin, TimeStampedModel):
     def audit_needed(cls, partner, assesment=None):
         audits = 0
         hact = json.loads(partner.hact_values) if isinstance(partner.hact_values, str) else partner.hact_values
-        if partner.total_ct_cp > 500000.00:
+        if (partner.total_ct_cp or 0) > 500000.00:  # Could be NULL (FIXME: shouldn't this value be a setting?)
             audits = 1
         hact['audits_mr'] = audits
         partner.hact_values = hact
@@ -512,7 +508,7 @@ class PartnerOrganization(AdminURLMixin, TimeStampedModel):
     @property
     def hact_min_requirements(self):
         programme_visits = spot_checks = 0
-        cash_transferred = self.total_ct_cy
+        cash_transferred = self.total_ct_cy or 0  # Could be NULL
         if cash_transferred == 0:
             programme_visits = 0
         elif 0 < cash_transferred <= 50000.00:

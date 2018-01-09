@@ -27,7 +27,7 @@ class TestFRHeaderView(APITenantTestCase):
             user=self.unicef_staff,
             data=data
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def test_get_one_fr(self):
 

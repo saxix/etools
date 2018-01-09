@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 
 import datetime
 
+from django.utils import six
+
 from mock import patch, Mock
 
 from EquiTrack.factories import (
@@ -86,7 +88,8 @@ class TestTransitionToClosed(FastTenantTestCase):
         intervention = InterventionFactory(
             end=datetime.date.today() + datetime.timedelta(days=2)
         )
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 TransitionError,
                 "End date is in the future"
         ):
@@ -102,7 +105,8 @@ class TestTransitionToClosed(FastTenantTestCase):
             actual_amt=10.00,
             outstanding_amt=5.00
         )
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 TransitionError,
                 'Total FR amount needs to equal total actual amount, and '
                 'Total Outstanding DCTs need to equal to 0'
@@ -124,7 +128,8 @@ class TestTransitionToClosed(FastTenantTestCase):
             actual_amt=20.00,
             outstanding_amt=0.00
         )
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 TransitionError,
                 'Total FR amount needs to equal total actual amount, and '
                 'Total Outstanding DCTs need to equal to 0'
@@ -163,7 +168,8 @@ class TestTransitionToClosed(FastTenantTestCase):
             intervention_amt=120000.00,
             outstanding_amt=0.00,
         )
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 TransitionError,
                 'Total amount transferred greater than 100,000 and no '
                 'Final Partnership Review was attached'
@@ -271,7 +277,8 @@ class TestTransitionToSigned(FastTenantTestCase):
                     document_type=d,
                     agreement=agreement,
                 )
-                with self.assertRaisesRegexp(
+                with six.assertRaisesRegex(
+                        self,
                         TransitionError,
                         "The PCA related to this record is Suspended or Terminated."
                 ):
@@ -295,7 +302,8 @@ class TestTransitionToActive(FastTenantTestCase):
                 document_type=d,
                 agreement=agreement,
             )
-            with self.assertRaisesRegexp(
+            with six.assertRaisesRegex(
+                    self,
                     TransitionError,
                     "PD cannot be activated if"
             ):
@@ -570,7 +578,8 @@ class TestSSFAgreementHasNoOtherIntervention(FastTenantTestCase):
     def test_agreement_not_ssfa(self):
         """If document type SSFA, and agreement is not then invalid"""
         self.agreement.agreement_type = Agreement.MOU
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 BasicValidationError,
                 "Agreement selected is not of type SSFA"
         ):
@@ -608,7 +617,8 @@ class TestInterventionValid(FastTenantTestCase):
                 "partners.validation.interventions.check_rigid_fields",
                 mock_check
         ):
-            with self.assertRaisesRegexp(
+            with six.assertRaisesRegex(
+                    self,
                     StateValidError,
                     "Cannot change fields while"
             ):
@@ -617,7 +627,7 @@ class TestInterventionValid(FastTenantTestCase):
     def test_state_signed_valid_invalid(self):
         """Invalid if unicef budget is 0"""
         self.intervention.total_unicef_budget = 0
-        with self.assertRaisesRegexp(StateValidError, "UNICEF Cash"):
+        with six.assertRaisesRegex(self, StateValidError, "UNICEF Cash"):
             self.validator.state_signed_valid(self.intervention)
 
     def test_state_signed_valid(self):
@@ -632,7 +642,8 @@ class TestInterventionValid(FastTenantTestCase):
         """Invalid if start is after today"""
         self.intervention.total_unicef_budget = 10
         self.intervention.start = self.future_date
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 StateValidError,
                 "Today is not after the start date"
         ):
@@ -642,7 +653,7 @@ class TestInterventionValid(FastTenantTestCase):
         """Invalid if unicef budget is 0"""
         self.intervention.total_unicef_budget = 0
         self.intervention.start = datetime.date(2001, 1, 1)
-        with self.assertRaisesRegexp(StateValidError, "UNICEF Cash"):
+        with six.assertRaisesRegex(self, StateValidError, "UNICEF Cash"):
             self.validator.state_active_valid(self.intervention)
 
     def test_state_active_valid(self):
@@ -656,7 +667,8 @@ class TestInterventionValid(FastTenantTestCase):
     def test_state_ended_valid_invalid(self):
         """Invalid if end date is after today"""
         self.intervention.end = self.future_date
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(
+                self,
                 StateValidError,
                 "Today is not after the end date"
         ):

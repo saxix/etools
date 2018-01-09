@@ -11,6 +11,8 @@ from django.contrib.sites.models import Site
 from django.core.cache import cache
 from django.db import connection
 from django.utils.cache import patch_cache_control
+from django.utils import six
+from django.utils.timezone import now
 
 import requests
 from rest_framework import status
@@ -58,7 +60,7 @@ def etag_cached(cache_key, public_cache=False):
     match the one sent along with the request.
     Otherwise it returns 304 NOT MODIFIED.
     """
-    assert isinstance(cache_key, (str, unicode)), 'Cache key has to be a string'
+    assert isinstance(cache_key, six.string_types), 'Cache key has to be a string'
 
     def make_cache_key():
         if public_cache:
@@ -153,7 +155,7 @@ def proccess_permissions(permission_dict):
             result[field][action][allowed] = []
 
         # this action should not have been defined with any other allowed param
-        assert result[field][action].keys() == [allowed], 'There cannot be two types of "allowed" defined on the same '\
+        assert list(result[field][action].keys()) == [allowed], 'There cannot be two types of "allowed" defined on the same '\
                                                           'field with the same action as the system will not  be able' \
                                                           ' to have a default behaviour'
 
@@ -172,7 +174,7 @@ def import_permissions(model_name):
     }
 
     def process_file():
-        with open(permission_file_map[model_name], 'rb') as csvfile:
+        with open(permission_file_map[model_name], 'r') as csvfile:
             sheet = csv.DictReader(csvfile, delimiter=',', quotechar='|')
             result = proccess_permissions(sheet)
         return result
@@ -182,3 +184,7 @@ def import_permissions(model_name):
     response = cache.get_or_set(cache_key, process_file, 60 * 60 * 24)
 
     return response
+
+
+def get_current_year():
+    return now().year

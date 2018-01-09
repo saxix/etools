@@ -17,12 +17,12 @@ These instructions assume you are starting with Ubuntu 16.04.
 Set up Python and Postgres
 --------------------------
 
-This step is unnecessary if you already have Python 2.7, Postgres 9.5, and PostGIS 2.2 installed on
+This step is unnecessary if you already have Python 3.4, Postgres 9.5, and PostGIS 2.2 installed on
 your machine.
 
 ```bash
 $ sudo apt update
-$ sudo apt install python2.7 python-pip virtualenv libgdal-dev \
+$ sudo apt install python3.4 python-pip virtualenv libgdal-dev \
                    postgresql postgresql-9.5-postgis-2.2 libpq-dev
 ```
 
@@ -67,10 +67,8 @@ Install the pip requirements
 Installing GDAL requires us to point to the proper location of the GDAL header files.
 
 ```bash
-$ export CPLUS_INCLUDE_PATH=/usr/include/gdal
-$ export C_INCLUDE_PATH=/usr/include/gdal
-$ mkvirtualenv -p `which python2.7` etools
-(etools)$ pip install -r requirements/local.txt
+$ mkvirtualenv -p `which python3.4` etools
+(etools)$ CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal pip install -r requirements/local.txt
 ```
 
 Set up your database

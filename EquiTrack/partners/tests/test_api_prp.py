@@ -36,7 +36,7 @@ class TestInterventionsAPI(WorkspaceRequiredAPITestMixIn, APITenantTestCase):
             user=user or self.unicef_staff,
             data=data,
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def test_prp_api(self):
         status_code, response = self.run_prp_v1(
@@ -142,21 +142,21 @@ class TestInterventionsAPIListPermissions(APITenantTestCase):
         view_info = resolve(self.url)
         request = factory.get(self.url)
         response = view_info.func(request)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_no_permission_user_forbidden(self):
         '''Ensure a non-staff user gets the 403 smackdown'''
         response = self.forced_auth_req('get', self.url, user=UserFactory())
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_group_member_has_access(self):
         '''Ensure a non-staff user in the correct group has access'''
         user = UserFactory()
         user.groups.add(Group.objects.get(name=READ_ONLY_API_GROUP_NAME))
         response = self.forced_auth_req('get', self.url, user=user, data=self.query_param_data)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_staff_has_access(self):
         '''Ensure a staff user has access'''
         response = self.forced_auth_req('get', self.url, user=UserFactory(is_staff=True), data=self.query_param_data)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -94,15 +94,15 @@ def after_partner_migrations(apps, schema_editor):
                         intervention.signed_by_unicef_date = intervention.signed_by_partner_date
                     else:
                         intervention.signed_by_unicef_date = intervention.created
-                print('before', intervention, intervention.status, intervention.document_type)
+                print(('before', intervention, intervention.status, intervention.document_type))
                 if not intervention.agreement:
                     continue
                 interventions_to_save.append(intervention)
             except Exception as e:
-                print(pca.number)
-                print(intervention.number)
+                print((pca.number))
+                print((intervention.number))
                 raise e
-            print('after', intervention, intervention.status, intervention.document_type)
+            print(('after', intervention, intervention.status, intervention.document_type))
         Intervention.objects.bulk_create(interventions_to_save)
 
     def agreement_amd_copy():
@@ -125,7 +125,7 @@ def after_partner_migrations(apps, schema_editor):
                                                                         signed_amendment=amd.signed_document,
                                                                         signed_date=amd.amended_at)
             if created:
-                print('{}-{}'.format(agr_amd.number, agr_amd.agreement))
+                print(('{}-{}'.format(agr_amd.number, agr_amd.agreement)))
 
     def copy_pca_results_to_intervention():
         for pca in PCA.objects.all():
@@ -150,7 +150,7 @@ def after_partner_migrations(apps, schema_editor):
             try:
                 intervention = Intervention.objects.get(number=pca_file.pca.number)
             except Intervention.DoesNotExist:
-                print(pca_file.pca.number)
+                print((pca_file.pca.number))
                 continue
             InterventionAttachment.objects.get_or_create(intervention=intervention,
                                                          type=pca_file.type,

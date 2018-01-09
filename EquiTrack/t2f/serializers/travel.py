@@ -121,7 +121,7 @@ class ActionPointSerializer(serializers.ModelSerializer):
     def validate_status(self, value):
         statuses = dict(ActionPoint.STATUS).keys()
         if value not in statuses:
-            raise ValidationError('Invalid status. Possible choices: {}'.format(', '.join(statuses)))
+            raise ValidationError('Invalid status. Possible choices: {}'.format(', '.join(sorted(statuses))))
         return value
 
 

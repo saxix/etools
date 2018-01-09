@@ -63,7 +63,7 @@ class TestAgreementsAPI(APITenantTestCase):
             user=user or self.partnership_manager_user,
             data=data
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def run_request(self, agreement_id, data=None, method='get', user=None):
         response = self.forced_auth_req(
@@ -72,7 +72,7 @@ class TestAgreementsAPI(APITenantTestCase):
             user=user or self.partnership_manager_user,
             data=data or {}
         )
-        return response.status_code, json.loads(response.rendered_content)
+        return response.status_code, json.loads(response.rendered_content.decode('utf-8'))
 
     def test_add_new_PCA(self):
         self.assertFalse(Activity.objects.exists())

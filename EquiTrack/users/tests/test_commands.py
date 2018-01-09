@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.utils import six
 
 from EquiTrack.factories import CurrencyFactory
 from EquiTrack.tests.mixins import FastTenantTestCase
@@ -18,10 +19,10 @@ class TestAddCountry(FastTenantTestCase):
         # failed
         name = "test"
         CurrencyFactory(code="USD")
-        with self.assertRaisesRegexp(CommandError, "Can't create tenant"):
+        with six.assertRaisesRegex(self, CommandError, "Can't create tenant"):
             call_command("add_country", name)
 
     def test_command_exception(self):
         country = Country.objects.first()
-        with self.assertRaisesRegexp(CommandError, "Currency matching query"):
+        with six.assertRaisesRegex(self, CommandError, "Currency matching query"):
             call_command("add_country", country.name)

@@ -5,6 +5,7 @@ from collections import namedtuple
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Model
+from django.utils import six
 from django.utils.module_loading import import_string
 
 from environment.models import IssueCheckConfig
@@ -39,7 +40,7 @@ class BaseIssueCheck(object):
                     self.run_check(model_instance, metadata)
                 except IssueFoundException as e:
                     issue = FlaggedIssue.get_or_new(content_object=model_instance, issue_id=self.check_id)
-                    issue.message = unicode(e)
+                    issue.message = six.text_type(e)
                     issue.save()
         # todo: is it always valid to run all checks against all tenants?
         run_on_all_tenants(_inner)
