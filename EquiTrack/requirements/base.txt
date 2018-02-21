@@ -1,5 +1,5 @@
 # Django packages
-Django==1.10.8
+Django==1.11.10
 django-model-utils==2.6
 dj-database-url==0.4.1
 dj-static==0.0.6
@@ -46,7 +46,7 @@ xhtml2pdf==0.1b3
 html5lib==1.0b8 #must be added after xhtml2pdf
 reportlab==3.3.0
 flower==0.9.1
-django-debug-toolbar==1.6 # add debug-toolbar to be able to test in dev while we have the current docker build
+django-debug-toolbar==1.9.1 # add debug-toolbar to be able to test in dev while we have the current docker build
 pyyaml==3.12
 django-ordered-model==1.3.0
 django-filter==1.0.2
