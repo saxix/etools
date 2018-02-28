@@ -2,6 +2,7 @@ import json
 import os
 import datetime
 
+import django
 from django.contrib.auth.models import Group
 from django.core.urlresolvers import reverse, resolve
 
@@ -105,7 +106,17 @@ class TestInterventionsAPI(WorkspaceRequiredAPITestMixIn, APITenantTestCase):
             self.assertEqual(expected_results, len(response['results']))
 
     def test_prp_api_performance(self):
-        EXPECTED_QUERIES = 21
+        """
+        Make sure number of queries is as expected
+
+        Queries with Django 1.10 = 21
+        Queries with Django 1.11 = 22
+
+        There's an extra "SET search_path = test,public" with Django 1.11 - why?  The tests in 'environment'
+        app didn't add any extra SET search_path with Django 1.11, once I added TENANT_LIMIT_SET_CALLS = True.
+        """
+
+        EXPECTED_QUERIES = 21 if django.VERSION < (1, 11) else 22
         with self.assertNumQueries(EXPECTED_QUERIES):
             self.run_prp_v1(
                 user=self.unicef_staff, method='get'

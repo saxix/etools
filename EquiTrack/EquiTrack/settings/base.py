@@ -394,6 +394,9 @@ LEAFLET_CONFIG = {
 
 # django-tenant-schemas: https://github.com/bernardopires/django-tenant-schemas
 TENANT_MODEL = "users.Country"  # app.Model
+# don't call set search_path so much
+# https://django-tenant-schemas.readthedocs.io/en/latest/use.html#performance-considerations
+TENANT_LIMIT_SET_CALLS = True
 
 # django-saml2: https://github.com/robertavram/djangosaml2
 HOST = os.environ.get('DJANGO_ALLOWED_HOST', 'localhost:8000')

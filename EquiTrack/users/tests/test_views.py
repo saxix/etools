@@ -348,13 +348,16 @@ class TestGroupViewSet(APITenantTestCase):
         self.url = "/api/groups/"
 
     def test_get(self):
-        group = Group.objects.first()
+        # Use the first group in name order
+        group = Group.objects.order_by('name').first()
         response = self.forced_auth_req(
             "get",
             self.url,
             user=self.unicef_staff,
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # the view should also return groups in name order, so the first one
+        # should be ``group``.
         self.assertEqual(response.data[0]["id"], str(group.pk))
 
     def test_api_groups_list(self):
