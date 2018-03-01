@@ -109,14 +109,16 @@ class TestInterventionsAPI(WorkspaceRequiredAPITestMixIn, APITenantTestCase):
         """
         Make sure number of queries is as expected
 
-        Queries with Django 1.10 = 21
-        Queries with Django 1.11 = 22
+        Queries with Django 1.10 = 23
+        Queries with Django 1.11 = 24
 
         There's an extra "SET search_path = test,public" with Django 1.11 - why?  The tests in 'environment'
         app didn't add any extra SET search_path with Django 1.11, once I added TENANT_LIMIT_SET_CALLS = True.
         """
+        EXPECTED_QUERIES = 23
+        if django.VERSION >= (1, 11):
+            EXPECTED_QUERIES += 1  # For the SET search_path
 
-        EXPECTED_QUERIES = 21 if django.VERSION < (1, 11) else 22
         with self.assertNumQueries(EXPECTED_QUERIES):
             self.run_prp_v1(
                 user=self.unicef_staff, method='get'
