@@ -86,7 +86,7 @@ class TestCreateKey(TestCase):
         res = parsers._create_key(["sample", "d", "k", "2"])
         self.assertEqual(res, "sample[d][k][2]")
 
-    def test_unicode(self):
+    def test_force_text(self):
         """If multiple elements in list then return dict str of path"""
         res = parsers._create_key(["sample", u"m\xe9lange", "k", "2"])
         self.assertEqual(res, "sample[m\xe9lange][k][2]")

@@ -1,4 +1,3 @@
-import sys
 from abc import ABCMeta, abstractmethod
 
 from django.conf import settings
@@ -6,6 +5,7 @@ from django.db import connection
 
 import requests
 from celery.utils.log import get_task_logger
+from django.utils import six
 
 from vision.exceptions import VisionException
 from vision.models import VisionSyncLog
@@ -124,9 +124,10 @@ class VisionDataSynchronizer(object):
             totals = self._save_records(converted_records)
 
         except Exception as e:
-            logger.info('sync caught {} with message "{}"'.format(type(e).__name__, e.message))
-            log.exception_message = e.message
-            raise VisionException(message=e.message), None, sys.exc_info()[2]
+            logger.info('sync caught {} with message "{}"'.format(type(e).__name__, e.args[0]))
+            log.exception_message = e.args[0]
+            # six.reraise(exc_type, exc_value, exc_traceback=None)
+            six.reraise(VisionException, VisionException(message=e.args[0]))
         else:
             if isinstance(totals, dict):
                 log.total_processed = totals.get('processed', 0)

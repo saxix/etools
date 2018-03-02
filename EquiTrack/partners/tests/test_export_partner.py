@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import datetime
 
 from django.core.urlresolvers import reverse
+from django.utils.encoding import force_text
 from rest_framework import status
 from tablib.core import Dataset
 
@@ -60,9 +61,9 @@ class TestPartnerOrganizationModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
-        self.assertEqual(dataset._get_headers(), [
+        headers = [
             'Vendor Number',
             'Organizations Full Name',
             'Short Name',
@@ -83,21 +84,23 @@ class TestPartnerOrganizationModelExport(PartnerModelExportTestCase):
             'Assessment Type (Date Assessed)',
             'Staff Members',
             'URL'
-        ])
+        ]
+        self.assertEqual(dataset._get_headers(), headers)
         deleted_flag = "Yes" if self.partner.deleted_flag else "No"
         blocked = "Yes" if self.partner.blocked else "No"
 
-        test_option = filter(lambda e: e[0] == self.partner.vendor_number, dataset)[0]
+        test_option = [e for e in dataset if e[0] == self.partner.vendor_number][0]
 
         # the order of staff members in the results is hard to determine
         # so just ensuring that all relevant staff members are in the results
+        members = test_option[headers.index('Staff Members')]
         for sm in self.partner.staff_members.filter(active=True).all():
             member = "{} ({})".format(sm.get_full_name(), sm.email)
-            self.assertIn(member, test_option[18])
+            self.assertIn(member, members)
 
         self.assertEqual(test_option, (
             self.partner.vendor_number,
-            unicode(self.partner.name),
+            force_text(self.partner.name),
             self.partner.short_name,
             self.partner.alternate_name,
             "{}".format(self.partner.partner_type),
@@ -127,7 +130,7 @@ class TestPartnerOrganizationModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 46)
         self.assertEqual(len(dataset[0]), 46)
@@ -141,7 +144,7 @@ class TestPartnerOrganizationModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 46)
         self.assertEqual(len(dataset[0]), 46)
@@ -167,7 +170,7 @@ class TestPartnerStaffMemberModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 2)
         self.assertEqual(len(dataset._get_headers()), 10)
         self.assertEqual(len(dataset[0]), 10)
@@ -181,7 +184,7 @@ class TestPartnerStaffMemberModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 2)
         self.assertEqual(len(dataset._get_headers()), 11)
         self.assertEqual(len(dataset[0]), 11)
@@ -214,7 +217,7 @@ class TestPartnerOrganizationAssessmentModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 17)
         self.assertEqual(len(dataset[0]), 17)
@@ -228,7 +231,7 @@ class TestPartnerOrganizationAssessmentModelExport(PartnerModelExportTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 14)
         self.assertEqual(len(dataset[0]), 14)
@@ -251,7 +254,7 @@ class TestPartnerOrganizationHactExport(APITenantTestCase):
             data={"format": "csv"}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 34)
         self.assertEqual(len(dataset[0]), 34)

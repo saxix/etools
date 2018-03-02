@@ -48,7 +48,7 @@ sqlparse==0.2.2  # for django debug toolbar to not break admin
 azure-storage==0.20.2
 requests==2.11.1
 xlrd==1.0.0
-xhtml2pdf==0.1b3
+xhtml2pdf==0.2.1
 html5lib==1.0b8 #must be added after xhtml2pdf
 reportlab==3.3.0
 flower==0.9.1

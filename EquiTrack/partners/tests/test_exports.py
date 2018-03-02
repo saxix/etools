@@ -5,6 +5,9 @@ import tempfile
 from rest_framework import status
 from tablib.core import Dataset
 
+from django.utils.encoding import force_text
+from django.utils import six
+
 from EquiTrack.factories import (
     UserFactory, PartnerFactory, AgreementFactory, InterventionFactory, CountryProgrammeFactory, ResultFactory,
     InterventionBudgetFactory, PartnerStaffFactory, InterventionPlannedVisitsFactory
@@ -88,7 +91,7 @@ class TestModelExport(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
 
         self.assertEqual(dataset._get_headers(), [
@@ -140,25 +143,25 @@ class TestModelExport(APITenantTestCase):
         ])
 
         self.assertEqual(dataset[0], (
-            unicode(self.intervention.agreement.partner.name),
-            unicode(self.intervention.agreement.partner.vendor_number),
+            force_text(self.intervention.agreement.partner.name),
+            force_text(self.intervention.agreement.partner.vendor_number),
             self.intervention.status,
             self.intervention.agreement.partner.partner_type,
             self.intervention.agreement.agreement_number,
-            unicode(self.intervention.agreement.country_programme.name),
+            force_text(self.intervention.agreement.country_programme.name),
             self.intervention.document_type,
             self.intervention.reference_number,
-            unicode(self.intervention.title),
+            force_text(self.intervention.title),
             '{}'.format(self.intervention.start),
             '{}'.format(self.intervention.end),
             u'',
             u'',
             u'',
-            unicode("Yes" if self.intervention.contingency_pd else "No"),
+            six.text_type("Yes" if self.intervention.contingency_pd else "No"),
             u'',
             u'',
             u'',
-            unicode(self.ib.currency),
+            six.text_type(self.ib.currency),
             u'{:.2f}'.format(self.intervention.total_partner_contribution),
             u'{:.2f}'.format(self.intervention.total_unicef_cash),
             u'{:.2f}'.format(self.intervention.total_in_kind_amount),
@@ -166,9 +169,9 @@ class TestModelExport(APITenantTestCase):
             u', '.join([fr.fr_numbers for fr in self.intervention.frs.all()]),
             u'',
             u'',
-            unicode(self.intervention.total_frs["total_frs_amt"]),
-            unicode(self.intervention.total_frs["total_actual_amt"]),
-            unicode(self.intervention.total_frs["total_outstanding_amt"]),
+            six.text_type(self.intervention.total_frs["total_frs_amt"]),
+            six.text_type(self.intervention.total_frs["total_actual_amt"]),
+            six.text_type(self.intervention.total_frs["total_outstanding_amt"]),
             u'{} (Q1:{} Q2:{}, Q3:{}, Q4:{})'.format(self.planned_visit.year,
                                                      self.planned_visit.programmatic_q1,
                                                      self.planned_visit.programmatic_q2,
@@ -183,10 +186,10 @@ class TestModelExport(APITenantTestCase):
             '{}'.format(self.intervention.signed_by_unicef_date),
             '{}'.format(self.intervention.days_from_submission_to_signed),
             '{}'.format(self.intervention.days_from_review_to_signed),
-            unicode(self.intervention.amendments.count()),
+            six.text_type(self.intervention.amendments.count()),
             u'',
-            unicode(', '.join(['{}'.format(att.type.name) for att in self.intervention.attachments.all()])),
-            unicode(self.intervention.attachments.count()),
+            six.text_type(', '.join(['{}'.format(att.type.name) for att in self.intervention.attachments.all()])),
+            six.text_type(self.intervention.attachments.count()),
             u'',
             u'https://testserver/pmp/interventions/{}/details/'.format(self.intervention.id),
         ))
@@ -200,7 +203,7 @@ class TestModelExport(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 2)
         self.assertEqual(dataset._get_headers(), [
             'Reference Number',
@@ -222,8 +225,8 @@ class TestModelExport(APITenantTestCase):
         exported_agreement = dataset[-1]
         self.assertEqual(exported_agreement, (
             self.agreement.agreement_number,
-            unicode(self.agreement.status),
-            unicode(self.agreement.partner.name),
+            force_text(self.agreement.status),
+            force_text(self.agreement.partner.name),
             self.agreement.agreement_type,
             '{}'.format(self.agreement.start),
             '{}'.format(self.agreement.end),
@@ -246,7 +249,7 @@ class TestModelExport(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 2)
         self.assertEqual(dataset._get_headers(), [
             'Vendor Number',
@@ -273,10 +276,10 @@ class TestModelExport(APITenantTestCase):
         deleted_flag = "Yes" if self.partner.deleted_flag else "No"
         blocked = "Yes" if self.partner.blocked else "No"
 
-        test_option = filter(lambda e: e[0] == self.partner.vendor_number, dataset)[0]
+        test_option = [e for e in dataset if e[0] == self.partner.vendor_number][0]
         self.assertEqual(test_option, (
             self.partner.vendor_number,
-            unicode(self.partner.name),
+            force_text(self.partner.name),
             self.partner.short_name,
             self.partner.alternate_name,
             "{}".format(self.partner.partner_type),

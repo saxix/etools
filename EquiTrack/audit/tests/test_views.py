@@ -4,6 +4,7 @@ import datetime
 import random
 
 from django.core.management import call_command
+from django.utils import six
 from rest_framework import status
 from mock import patch, Mock
 
@@ -251,10 +252,10 @@ class TestEngagementsListViewSet(EngagementTransitionsTestCaseMixin, APITenantTe
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('results', response.data)
         self.assertIsInstance(response.data['results'], list)
-        self.assertItemsEqual(
-            map(lambda x: x['id'], response.data['results']),
-            map(lambda x: x.id, engagements)
-        )
+        six.assertCountEqual(self,
+                             map(lambda x: x['id'], response.data['results']),
+                             map(lambda x: x.id, engagements)
+                             )
 
     def test_focal_point_list(self):
         self._test_list(self.unicef_focal_point, [self.engagement, self.second_engagement])
@@ -477,10 +478,10 @@ class TestEngagementsUpdateViewSet(EngagementTransitionsTestCaseMixin, APITenant
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
-            map(lambda pd: pd['id'], response.data['active_pd']),
-            map(lambda i: i.id, partner.agreements.first().interventions.all())
-        )
+        six.assertCountEqual(self,
+                             map(lambda pd: pd['id'], response.data['active_pd']),
+                             map(lambda i: i.id, partner.agreements.first().interventions.all())
+                             )
 
     def test_government_partner_changed(self):
         partner = PartnerWithAgreementsFactory(partner_type=PartnerType.GOVERNMENT)
@@ -502,10 +503,10 @@ class TestAuditorFirmViewSet(AuditTestCaseMixin, APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
-            map(lambda x: x['id'], response.data['results']),
-            map(lambda x: x.id, expected_firms)
-        )
+        six.assertCountEqual(self,
+                             map(lambda x: x['id'], response.data['results']),
+                             map(lambda x: x.id, expected_firms)
+                             )
 
     def test_unicef_list_view(self):
         self._test_list_view(self.unicef_user, [self.auditor_firm, self.second_auditor_firm])

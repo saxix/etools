@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import json
 from unittest import skip
 
+from django.utils import six
 from mock import patch, Mock
 from tenant_schemas.utils import schema_context
 
@@ -57,7 +58,7 @@ class TestUserMapper(EToolsTenantTestCase):
             country = CountryFactory(business_area_code=area_code)
             res = self.mapper._get_country(area_code)
         self.assertEqual(res, country)
-        self.assertItemsEqual(self.mapper.countries, {
+        six.assertCountEqual(self, self.mapper.countries, {
             area_code: country,
             "UAT": country_uat
         })
@@ -73,7 +74,7 @@ class TestUserMapper(EToolsTenantTestCase):
         }
         res = self.mapper._get_country(area_code)
         self.assertEqual(res, country)
-        self.assertItemsEqual(self.mapper.countries, {
+        six.assertCountEqual(self, self.mapper.countries, {
             "UAT": country_uat,
             area_code: country,
         })
@@ -108,7 +109,7 @@ class TestUserMapper(EToolsTenantTestCase):
         self.assertEqual(self.mapper.sections, {})
         res = self.mapper._get_section(name, code)
         self.assertIsInstance(res, Section)
-        self.assertEqual(self.mapper.sections.keys(), [name])
+        self.assertEqual(list(self.mapper.sections.keys()), [name])
         with schema_context(SCHEMA_NAME):
             self.assertTrue(
                 Section.objects.filter(name=name, code=code).exists()

@@ -67,7 +67,8 @@ class TestReportViews(APITenantTestCase):
         url = reverse('results-list')
         response = self.forced_auth_req('get', url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(int(response.data[0]["id"]), self.result1.id)
+        ids = [int(item['id']) for item in response.data]
+        self.assertEqual(sorted(ids), sorted([self.result1.id, self.result2.id]))
 
     def test_api_results_patch(self):
         url = reverse('results-detail', args=[self.result1.id])
@@ -85,13 +86,14 @@ class TestReportViews(APITenantTestCase):
     def test_apiv2_results_list(self):
         response = self.forced_auth_req('get', self.v2_results_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(int(response.data[0]["id"]), self.result1.id)
+        ids = [int(item['id']) for item in response.data]
+        self.assertEqual(sorted(ids), sorted([self.result1.id, self.result2.id]))
 
     def test_apiv2_results_list_minimal(self):
         data = {"verbosity": "minimal"}
         response = self.forced_auth_req('get', self.v2_results_url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0].keys(), ["id", "name"])
+        self.assertEqual(list(response.data[0].keys()), ["id", "name"])
 
     def test_apiv2_results_retrieve(self):
         detail_url = reverse('report-result-detail', args=[self.result1.id])
@@ -114,13 +116,15 @@ class TestReportViews(APITenantTestCase):
         data = {"country_programme": self.result1.country_programme.id}
         response = self.forced_auth_req('get', self.v2_results_url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(int(response.data[0]["id"]), self.result1.id)
+        ids = [int(item['id']) for item in response.data]
+        self.assertEqual(sorted(ids), sorted([self.result1.id, self.result2.id]))
 
     def test_apiv2_results_list_filter_result_type(self):
         data = {"result_type": self.result_type.name}
         response = self.forced_auth_req('get', self.v2_results_url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(int(response.data[0]["id"]), self.result1.id)
+        ids = [int(item['id']) for item in response.data]
+        self.assertEqual(sorted(ids), sorted([self.result1.id, self.result2.id]))
 
     def test_apiv2_results_list_filter_values(self):
         data = {"values": '{},{}'.format(self.result1.id, self.result2.id)}
@@ -142,6 +146,8 @@ class TestReportViews(APITenantTestCase):
         response = self.forced_auth_req('get', self.v2_results_url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(self.result1.id, [int(i["id"]) for i in response.data])
+        ids = [int(item['id']) for item in response.data]
+        self.assertEqual(sorted(ids), sorted([self.result1.id, self.result2.id]))
 
 
 class TestDisaggregationListCreateViews(APITenantTestCase):
@@ -387,7 +393,7 @@ class TestLowerResultExportList(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 6)
         self.assertEqual(len(dataset[0]), 6)
@@ -401,7 +407,7 @@ class TestLowerResultExportList(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 6)
         self.assertEqual(len(dataset[0]), 6)
@@ -439,7 +445,7 @@ class TestAppliedIndicatorExportList(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 24)
         self.assertEqual(len(dataset[0]), 24)
@@ -453,7 +459,7 @@ class TestAppliedIndicatorExportList(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        dataset = Dataset().load(response.content, 'csv')
+        dataset = Dataset().load(response.content.decode('utf-8'), 'csv')
         self.assertEqual(dataset.height, 1)
         self.assertEqual(len(dataset._get_headers()), 24)
         self.assertEqual(len(dataset[0]), 24)

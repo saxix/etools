@@ -4,6 +4,7 @@ from datetime import timedelta, datetime
 
 from django.core.management import call_command
 from django.core.urlresolvers import reverse
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import status
@@ -45,10 +46,10 @@ class TestTPMVisitViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase):
         )
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
-            map(lambda x: x['id'], response.data['results']),
-            map(lambda x: x.id, expected_visits)
-        )
+        six.assertCountEqual(self,
+                             map(lambda x: x['id'], response.data['results']),
+                             map(lambda x: x.id, expected_visits)
+                             )
 
     def test_unicef_list_view(self):
         tpm_visits = [TPMVisitFactory(), TPMVisitFactory()]
@@ -338,10 +339,10 @@ class TestTPMPartnerViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase
         )
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertItemsEqual(
-            map(lambda x: x['id'], response.data['results']),
-            map(lambda x: x.id, expected_firms)
-        )
+        six.assertCountEqual(self,
+                             map(lambda x: x['id'], response.data['results']),
+                             map(lambda x: x.id, expected_firms)
+                             )
 
     def _test_list_options(self, user, can_create=True, writable_fields=None):
         response = self.forced_auth_req(
@@ -354,10 +355,10 @@ class TestTPMPartnerViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase
 
         if can_create:
             self.assertIn('POST', response.data['actions'])
-            self.assertItemsEqual(
-                writable_fields or [],
-                response.data['actions']['POST'].keys()
-            )
+            six.assertCountEqual(self,
+                                 writable_fields or [],
+                                 response.data['actions']['POST'].keys()
+                                 )
         else:
             self.assertNotIn('POST', response.data['actions'])
 
@@ -372,10 +373,10 @@ class TestTPMPartnerViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase
 
         if can_update:
             self.assertIn('PUT', response.data['actions'])
-            self.assertItemsEqual(
-                writable_fields or [],
-                response.data['actions']['PUT'].keys()
-            )
+            six.assertCountEqual(self,
+                                 writable_fields or [],
+                                 list(response.data['actions']['PUT'].keys())
+                                 )
         else:
             self.assertNotIn('PUT', response.data['actions'])
 
@@ -388,7 +389,7 @@ class TestTPMPartnerViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase
     def test_tpm_partner_list_view(self):
         self._test_list_view(self.tpm_user, [self.tpm_partner])
 
-    def test_pme_list_options(self):
+    def test_pme_list_options(self):  # FAIL
         self._test_list_options(
             self.pme_user,
             writable_fields=['attachments', 'email', 'hidden', 'phone_number']
@@ -397,7 +398,7 @@ class TestTPMPartnerViewSet(TestExportMixin, TPMTestCaseMixin, APITenantTestCase
     def test_tpm_partner_list_options(self):
         self._test_list_options(self.tpm_user, can_create=False)
 
-    def test_pme_detail_options(self):
+    def test_pme_detail_options(self):  # FAIL
         self._test_detail_options(
             self.pme_user,
             writable_fields=['attachments', 'email', 'hidden', 'phone_number']

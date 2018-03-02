@@ -13,6 +13,7 @@ from django.db import connection
 from django.db.models.query_utils import Q
 from django.template.loader import render_to_string
 from django.utils.datastructures import MultiValueDict
+from django.utils import six
 
 from t2f.models import Invoice
 from users.models import Country as Workspace
@@ -105,7 +106,12 @@ class InvoiceExport(object):
 
     def generate_tree(self, root):
         # https://docs.python.org/2/library/xml.etree.elementtree.html
-        return ET.tostring(root, encoding='UTF-8', method='xml')
+        # https://docs.python.org/3/library/xml.etree.elementtree.html#xml.etree.ElementTree.ElementTree.write
+        # root is an Element
+        tree = ET.ElementTree(root)
+        buffer = six.BytesIO()
+        tree.write(buffer, xml_declaration=True, encoding='utf-8')
+        return buffer.getvalue()
 
     @staticmethod
     def get_posting_key(amount):
@@ -213,4 +219,4 @@ class InvoiceUpdater(object):
         try:
             msg.send(fail_silently=False)
         except ValidationError as exc:
-            log.error('Was not able to send the email. Exception: %s', exc.message)
+            log.error('Was not able to send the email. Exception: %s', exc.args[0])

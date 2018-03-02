@@ -217,7 +217,7 @@ class DSACalculator(object):
 
     def get_by_day_grouping(self):
         """
-        Returns a mapping where the key represents the day, the value represents the DSA Region applied
+        Returns a list of DSAdto objects, sorted by .date.
         """
         mapping = {}
 
@@ -234,6 +234,8 @@ class DSACalculator(object):
         start_date = self._cast_datetime(itinerary_item_list[0].arrival_date).date()
         end_date = self._cast_datetime(itinerary_item_list[-1].departure_date).date()
 
+        # Fill in missing dates in the mapping using whatever was in the most
+        # recent date that was already populated.
         tmp_date = start_date
         previous_itinerary = None
         while tmp_date <= end_date:
@@ -245,14 +247,16 @@ class DSACalculator(object):
 
         dsa_dto_list = []
         counter = 1
-        for date, itinerary in mapping.items():
+        # Process these in date order so we know when we pass 60 days
+        for date in sorted(mapping.keys()):
+            itinerary = mapping[date]
             dto = DSAdto(date, itinerary)
             over_60 = counter > 60
             dto.daily_rate = self.get_dsa_amount(dto.region, over_60)
             dsa_dto_list.append(dto)
             counter += 1
 
-        return sorted(dsa_dto_list, cmp=lambda x, y: cmp(x.date, y.date))
+        return dsa_dto_list
 
     def check_one_day_long_trip(self, dsa_dto_list):
         # If it's a day long trip and only one less than 8 hour travel was made, no dsa applied

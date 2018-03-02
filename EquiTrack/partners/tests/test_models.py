@@ -4,7 +4,8 @@ import sys
 from unittest import skipIf, TestCase, skip
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils import timezone
+from django.utils import timezone, six
+from django.utils.encoding import force_text
 from freezegun import freeze_time
 
 from mock import patch, Mock
@@ -842,7 +843,7 @@ class TestInterventionModel(EToolsTenantTestCase):
         )
         lower_result_1 = LowerResultFactory(result_link=link)
         lower_result_2 = LowerResultFactory(result_link=link)
-        self.assertItemsEqual(intervention.all_lower_results, [
+        six.assertCountEqual(self, intervention.all_lower_results, [
             lower_result_1,
             lower_result_2,
         ])
@@ -867,7 +868,7 @@ class TestInterventionModel(EToolsTenantTestCase):
             lower_result=lower_result_2
         )
         applied_indicator_2.locations.add(location_2)
-        self.assertItemsEqual(intervention.intervention_locations, [
+        six.assertCountEqual(self, intervention.intervention_locations, [
             location_1,
             location_2,
         ])
@@ -895,7 +896,7 @@ class TestInterventionModel(EToolsTenantTestCase):
             cluster_name=None,
         )
         AppliedIndicatorFactory(lower_result=lower_result_2)
-        self.assertItemsEqual(intervention.intervention_clusters, [
+        six.assertCountEqual(self, intervention.intervention_clusters, [
             "Title 1",
             "Title 2",
         ])
@@ -1454,7 +1455,7 @@ class TestInterventionReportingPeriod(EToolsTenantTestCase):
 
 @skipIf(sys.version_info.major == 3, "This test can be deleted under Python 3")
 class TestStrUnicodeSlow(EToolsTenantTestCase):
-    '''Ensure calling str() on model instances returns UTF8-encoded text and unicode() returns unicode.
+    '''Ensure calling str() on model instances returns UTF8-encoded text and force_text() returns unicode.
 
     This is the same as TestStrUnicode below, except that it tests objects that need to be saved to the database
     so it's based on EToolsTenantTestCase instead of TestCase.
@@ -1463,132 +1464,132 @@ class TestStrUnicodeSlow(EToolsTenantTestCase):
         partner = PartnerFactory(name=b'xyz')
         instance = AssessmentFactory(partner=partner)
         self.assertIn(b'xyz', str(instance))
-        self.assertIn(u'xyz', unicode(instance))
+        self.assertIn(u'xyz', force_text(instance))
 
         partner = PartnerFactory(name=u'R\xe4dda Barnen')
         instance = AssessmentFactory(partner=partner)
         self.assertIn(b'R\xc3\xa4dda Barnen', str(instance))
-        self.assertIn(u'R\xe4dda Barnen', unicode(instance))
+        self.assertIn(u'R\xe4dda Barnen', force_text(instance))
 
     def test_agreement_amendment(self):
         partner = PartnerFactory(name=b'xyz')
         agreement = AgreementFactory(partner=partner)
         instance = AgreementAmendmentFactory(number=b'xyz', agreement=agreement)
         # This model's __str__() method operates on a limited range of text, so it's not possible to challenge it
-        # with non-ASCII text. As long as str() and unicode() succeed, that's all the testing we can do.
+        # with non-ASCII text. As long as str() and force_text() succeed, that's all the testing we can do.
         str(instance)
-        unicode(instance)
+        force_text(instance)
 
 
 @skipIf(sys.version_info.major == 3, "This test can be deleted under Python 3")
 class TestStrUnicode(TestCase):
-    '''Ensure calling str() on model instances returns UTF8-encoded text and unicode() returns unicode.'''
+    '''Ensure calling str() on model instances returns UTF8-encoded text and force_text() returns unicode.'''
     def test_workspace_file_type(self):
         instance = WorkspaceFileTypeFactory.build(name=b'xyz')
         self.assertEqual(str(instance), b'xyz')
-        self.assertEqual(unicode(instance), u'xyz')
+        self.assertEqual(force_text(instance), u'xyz')
 
         instance = WorkspaceFileTypeFactory.build(name=u'R\xe4dda Barnen')
         self.assertEqual(str(instance), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(instance), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(instance), u'R\xe4dda Barnen')
 
     def test_partner_organization(self):
         instance = PartnerFactory.build(name=b'xyz')
         self.assertEqual(str(instance), b'xyz')
-        self.assertEqual(unicode(instance), u'xyz')
+        self.assertEqual(force_text(instance), u'xyz')
 
         instance = PartnerFactory.build(name=u'R\xe4dda Barnen')
         self.assertEqual(str(instance), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(instance), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(instance), u'R\xe4dda Barnen')
 
     def test_partner_staff_member(self):
         partner = PartnerFactory.build(name=b'partner')
 
         instance = PartnerStaffFactory.build(first_name=b'xyz', partner=partner)
         self.assertTrue(str(instance).startswith(b'xyz'))
-        self.assertTrue(unicode(instance).startswith(u'xyz'))
+        self.assertTrue(force_text(instance).startswith(u'xyz'))
 
         instance = PartnerStaffFactory.build(first_name=u'R\xe4dda Barnen', partner=partner)
         self.assertTrue(str(instance).startswith(b'R\xc3\xa4dda Barnen'))
-        self.assertTrue(unicode(instance).startswith(u'R\xe4dda Barnen'))
+        self.assertTrue(force_text(instance).startswith(u'R\xe4dda Barnen'))
 
     def test_agreement(self):
         partner = PartnerFactory.build(name=b'xyz')
         instance = AgreementFactory.build(partner=partner)
         self.assertIn(b'xyz', str(instance))
-        self.assertIn(u'xyz', unicode(instance))
+        self.assertIn(u'xyz', force_text(instance))
 
         partner = PartnerFactory.build(name=u'R\xe4dda Barnen')
         instance = AgreementFactory.build(partner=partner)
         self.assertIn(b'R\xc3\xa4dda Barnen', str(instance))
-        self.assertIn(u'R\xe4dda Barnen', unicode(instance))
+        self.assertIn(u'R\xe4dda Barnen', force_text(instance))
 
     def test_intervention(self):
         instance = InterventionFactory.build(number=b'two')
         self.assertEqual(b'two', str(instance))
-        self.assertEqual(u'two', unicode(instance))
+        self.assertEqual(u'two', force_text(instance))
 
         instance = InterventionFactory.build(number=u'tv\xe5')
         self.assertEqual(b'tv\xc3\xa5', str(instance))
-        self.assertEqual(u'tv\xe5', unicode(instance))
+        self.assertEqual(u'tv\xe5', force_text(instance))
 
     def test_intervention_amendment(self):
         instance = InterventionAmendmentFactory.build()
         # This model's __str__() method operates on a limited range of text, so it's not possible to challenge it
-        # with non-ASCII text. As long as str() and unicode() succeed, that's all the testing we can do.
+        # with non-ASCII text. As long as str() and force_text() succeed, that's all the testing we can do.
         str(instance)
-        unicode(instance)
+        force_text(instance)
 
     def test_intervention_result_link(self):
         intervention = InterventionFactory.build(number=b'two')
         instance = InterventionResultLinkFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'two'))
-        self.assertTrue(unicode(instance).startswith(u'two'))
+        self.assertTrue(force_text(instance).startswith(u'two'))
 
         intervention = InterventionFactory.build(number=u'tv\xe5')
         instance = InterventionResultLinkFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'tv\xc3\xa5'))
-        self.assertTrue(unicode(instance).startswith(u'tv\xe5'))
+        self.assertTrue(force_text(instance).startswith(u'tv\xe5'))
 
     def test_intervention_budget(self):
         intervention = InterventionFactory.build(number=b'two')
         instance = InterventionBudgetFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'two'))
-        self.assertTrue(unicode(instance).startswith(u'two'))
+        self.assertTrue(force_text(instance).startswith(u'two'))
 
         intervention = InterventionFactory.build(number=u'tv\xe5')
         instance = InterventionBudgetFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'tv\xc3\xa5'))
-        self.assertTrue(unicode(instance).startswith(u'tv\xe5'))
+        self.assertTrue(force_text(instance).startswith(u'tv\xe5'))
 
     def test_file_type(self):
         instance = FileTypeFactory.build()
         # This model's __str__() method returns model constants, so it's not possible to challenge it
-        # with non-ASCII text. As long as str() and unicode() succeed, that's all the testing we can do.
+        # with non-ASCII text. As long as str() and force_text() succeed, that's all the testing we can do.
         str(instance)
-        unicode(instance)
+        force_text(instance)
 
     def test_intervention_attachment(self):
         attachment = SimpleUploadedFile(b'two.txt', u'hello world!'.encode('utf-8'))
         instance = InterventionAttachmentFactory.build(attachment=attachment)
         self.assertEqual(str(instance), b'two.txt')
-        self.assertEqual(unicode(instance), u'two.txt')
+        self.assertEqual(force_text(instance), u'two.txt')
 
         attachment = SimpleUploadedFile(u'tv\xe5.txt', u'hello world!'.encode('utf-8'))
         instance = InterventionAttachmentFactory.build(attachment=attachment)
         self.assertEqual(str(instance), b'tv\xc3\xa5.txt')
-        self.assertEqual(unicode(instance), u'tv\xe5.txt')
+        self.assertEqual(force_text(instance), u'tv\xe5.txt')
 
     def test_intervention_reporting_period(self):
         intervention = InterventionFactory.build(number=b'two')
         instance = InterventionReportingPeriodFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'two'))
-        self.assertTrue(unicode(instance).startswith(b'two'))
+        self.assertTrue(force_text(instance).startswith(b'two'))
 
         intervention = InterventionFactory.build(number=u'tv\xe5')
         instance = InterventionReportingPeriodFactory.build(intervention=intervention)
         self.assertTrue(str(instance).startswith(b'tv\xc3\xa5'))
-        self.assertTrue(unicode(instance).startswith(u'tv\xe5'))
+        self.assertTrue(force_text(instance).startswith(u'tv\xe5'))
 
 
 class TestPlannedEngagement(EToolsTenantTestCase):

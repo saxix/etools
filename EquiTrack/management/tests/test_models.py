@@ -6,6 +6,8 @@ from __future__ import unicode_literals
 import sys
 from unittest import skipIf
 
+from django.utils.encoding import force_text
+
 from EquiTrack.factories import PartnerFactory
 from EquiTrack.tests.cases import EToolsTenantTestCase
 from management.models import FlaggedIssue
@@ -22,7 +24,7 @@ class TestStrUnicode(EToolsTenantTestCase):
             message='test message'
         )
         self.assertEqual(str(issue), b"test message")
-        self.assertEqual(unicode(issue), u"test message")
+        self.assertEqual(force_text(issue), u"test message")
 
         issue = FlaggedIssueFactory(
             content_object=partner,
@@ -30,7 +32,7 @@ class TestStrUnicode(EToolsTenantTestCase):
             message=u"R\xe4dda Barnen"
         )
         self.assertEqual(str(issue), b"R\xc3\xa4dda Barnen")
-        self.assertEqual(unicode(issue), u"R\xe4dda Barnen")
+        self.assertEqual(force_text(issue), u"R\xe4dda Barnen")
 
 
 class FlaggedIssueTest(EToolsTenantTestCase):

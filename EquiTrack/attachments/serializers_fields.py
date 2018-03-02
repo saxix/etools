@@ -37,7 +37,7 @@ class FileTypeModelChoiceField(ModelChoiceField):
 
 class Base64FileField(serializers.FileField):
     def to_internal_value(self, data):
-        if not isinstance(data, six.string_types):
+        if not isinstance(data, six.text_type):
             raise serializers.ValidationError(_('Incorrect base64 format.'))
 
         try:

@@ -6,6 +6,8 @@ from __future__ import unicode_literals
 import sys
 from unittest import skipIf
 
+from django.utils.encoding import force_text
+
 from EquiTrack.factories import (
     DonorFactory,
     FundsCommitmentHeaderFactory,
@@ -20,47 +22,47 @@ from funds.models import FundsReservationItem, FundsCommitmentItem
 
 @skipIf(sys.version_info.major == 3, "This test can be deleted under Python 3")
 class TestStrUnicode(EToolsTenantTestCase):
-    '''Ensure calling str() on model instances returns UTF8-encoded text and unicode() returns unicode.'''
+    '''Ensure calling str() on model instances returns UTF8-encoded text and force_text() returns unicode.'''
     def test_donor(self):
         donor = DonorFactory.build(name=u'R\xe4dda Barnen')
         self.assertEqual(str(donor), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(donor), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(donor), u'R\xe4dda Barnen')
 
     def test_grant(self):
         donor = DonorFactory.build(name=b'xyz')
         grant = GrantFactory.build(donor=donor, name=u'R\xe4dda Barnen')
         self.assertEqual(str(grant), b'xyz: R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(grant), u'xyz: R\xe4dda Barnen')
+        self.assertEqual(force_text(grant), u'xyz: R\xe4dda Barnen')
 
         donor = DonorFactory.build(name=u'xyz')
         grant = GrantFactory.build(donor=donor, name=u'R\xe4dda Barnen')
         self.assertEqual(str(grant), b'xyz: R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(grant), u'xyz: R\xe4dda Barnen')
+        self.assertEqual(force_text(grant), u'xyz: R\xe4dda Barnen')
 
         donor = DonorFactory.build(name=u'R\xe4dda Barnen')
         grant = GrantFactory.build(donor=donor, name=b'xyz')
         self.assertEqual(str(grant), b'R\xc3\xa4dda Barnen: xyz')
-        self.assertEqual(unicode(grant), u'R\xe4dda Barnen: xyz')
+        self.assertEqual(force_text(grant), u'R\xe4dda Barnen: xyz')
 
     def test_funds_reservation_header(self):
         funds_reservation_header = FundsReservationHeaderFactory.build(fr_number=u'R\xe4dda Barnen')
         self.assertEqual(str(funds_reservation_header), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(funds_reservation_header), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(funds_reservation_header), u'R\xe4dda Barnen')
 
     def test_funds_reservation_item(self):
         funds_reservation_item = FundsReservationItemFactory.build(fr_ref_number=u'R\xe4dda Barnen')
         self.assertEqual(str(funds_reservation_item), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(funds_reservation_item), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(funds_reservation_item), u'R\xe4dda Barnen')
 
     def test_funds_commitment_header(self):
         funds_commitment_header = FundsCommitmentHeaderFactory.build(fc_number=u'R\xe4dda Barnen')
         self.assertEqual(str(funds_commitment_header), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(funds_commitment_header), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(funds_commitment_header), u'R\xe4dda Barnen')
 
     def test_funds_commitment_item(self):
         funds_commitment_item = FundsCommitmentItemFactory.build(fc_ref_number=u'R\xe4dda Barnen')
         self.assertEqual(str(funds_commitment_item), b'R\xc3\xa4dda Barnen')
-        self.assertEqual(unicode(funds_commitment_item), u'R\xe4dda Barnen')
+        self.assertEqual(force_text(funds_commitment_item), u'R\xe4dda Barnen')
 
 
 class TestFundsReservationItem(EToolsTenantTestCase):

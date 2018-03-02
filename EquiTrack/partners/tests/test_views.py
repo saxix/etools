@@ -5,18 +5,18 @@ import datetime
 from decimal import Decimal
 import json
 from unittest import skip, TestCase
-from urlparse import urlparse
 
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse, resolve
 from django.db import connection
-from django.utils import timezone
+from django.utils import timezone, six
 
 from model_utils import Choices
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
+from six.moves.urllib.parse import urlparse
 
 from EquiTrack.factories import (
     AgreementFactory,
@@ -271,7 +271,7 @@ class TestAPIPartnerOrganizationListView(APITenantTestCase):
             self.assertIsInstance(list_element, dict)
             ids_in_response.append(list_element.get('id'))
 
-        self.assertItemsEqual(ids_in_response, (p1.id, p2.id))
+        six.assertCountEqual(self, ids_in_response, (p1.id, p2.id))
 
     def test_values_negative(self):
         '''Ensure that garbage values are handled properly'''
@@ -321,13 +321,14 @@ class TestPartnerOrganizationListViewForCSV(APITenantTestCase):
         # but I want to make sure the response looks CSV-ish.
         self.assertEqual(response.get('Content-Disposition'), 'attachment;filename=partner.csv')
 
-        self.assertIsInstance(response.rendered_content, basestring)
+        self.assertIsInstance(response.rendered_content, six.binary_type)
+        self.assertIsInstance(response.rendered_content.decode('utf-8'), six.text_type)
 
         # The response should *not* look like JSON.
         with self.assertRaises(ValueError):
             json.loads(response.rendered_content)
 
-        lines = response.rendered_content.replace('\r\n', '\n').split('\n')
+        lines = response.rendered_content.decode('utf-8').replace('\r\n', '\n').split('\n')
         # Try to read it with Python's CSV reader.
         reader = csv.DictReader(lines)
 
@@ -659,15 +660,18 @@ class TestPartnerOrganizationRetrieveUpdateDeleteViews(APITenantTestCase):
         self.assertIn("vendor_number", response.data.keys())
         self.assertIn("address", response.data.keys())
         self.assertIn("Partner", response.data["name"])
-        self.assertEqual(['programme_visits', 'spot_checks'], response.data['hact_min_requirements'].keys())
-        self.assertEqual(['outstanding_findings', 'audits', 'programmatic_visits', 'spot_checks'],
-                         response.data['hact_values'].keys())
-        self.assertItemsEqual(
+        self.assertEqual(['programme_visits', 'spot_checks'], sorted(response.data['hact_min_requirements'].keys()))
+        self.assertEqual(
+            ['audits', 'outstanding_findings', 'programmatic_visits', 'spot_checks'],
+            sorted(response.data['hact_values'].keys()))
+        six.assertCountEqual(
+            self,
             ['completed', 'minimum_requirements'],
-            response.data['hact_values']['audits'].keys()
+            sorted(response.data['hact_values']['audits'].keys())
         )
-        self.assertEqual(['outstanding_findings', 'audits', 'programmatic_visits', 'spot_checks'],
-                         response.data['hact_values'].keys())
+        self.assertEqual(
+            ['audits', 'outstanding_findings', 'programmatic_visits', 'spot_checks'],
+            sorted(response.data['hact_values'].keys()))
         self.assertEqual(response.data['interventions'], [])
 
     def test_api_partners_retreive_actual_fr_amounts(self):
@@ -843,7 +847,7 @@ class TestAgreementCreateAPIView(APITenantTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.assertIsInstance(response.data, dict)
-        self.assertEqual(response.data.keys(), ['country_programme'])
+        self.assertEqual(list(response.data.keys()), ['country_programme'])
         self.assertIsInstance(response.data['country_programme'], list)
         self.assertEqual(response.data['country_programme'][0], 'Country Programme is required for PCAs!')
 
@@ -1484,7 +1488,7 @@ class TestInterventionViews(APITenantTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0].keys(), ["id", "title"])
+        self.assertEqual(list(response.data[0].keys()), ["id", "title"])
 
     def test_intervention_create(self):
         data = {
@@ -1540,7 +1544,7 @@ class TestInterventionViews(APITenantTestCase):
         r_data = json.loads(response.rendered_content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(r_data["frs_details"]['frs']), 2)
-        self.assertItemsEqual(r_data["frs"], [self.fr_header_2.id, self.fr_header_1.id])
+        six.assertCountEqual(self, r_data["frs"], [self.fr_header_2.id, self.fr_header_1.id])
 
     def test_intervention_active_update_population_focus(self):
         intervention_obj = Intervention.objects.get(id=self.intervention_data["id"])

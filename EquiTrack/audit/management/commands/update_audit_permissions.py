@@ -99,21 +99,21 @@ class Command(BaseCommand):
         })
 
     def _update_permissions(self, status, roles, perm_type, perm, targets):
-        if isinstance(roles, six.string_types):
+        if isinstance(roles, six.text_type):
             roles = [roles, ]
 
-        if isinstance(targets, six.string_types):
+        if isinstance(targets, six.text_type):
             targets = [targets, ]
 
         for role in roles:
             for target in targets:
-                existing = filter(
-                    lambda p: (p.instance_status == status and
-                               p.target == target and
-                               p.user_type == self.user_roles[role] and
-                               p.permission_type == perm_type),
-                    self.permissions
-                )
+                existing = [
+                    p for p in self.permissions
+                    if (p.instance_status == status and
+                        p.target == target and
+                        p.user_type == self.user_roles[role] and
+                        p.permission_type == perm_type)
+                ]
                 if not existing:
                     self.permissions.append(self._get_perm_obj(status, role, perm_type, perm, target))
                     continue

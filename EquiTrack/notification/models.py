@@ -93,7 +93,7 @@ class Notification(models.Model):
         else:
             sender = settings.DEFAULT_FROM_EMAIL
 
-        if isinstance(self.template_data, six.string_types):
+        if isinstance(self.template_data, six.text_type):
             template_data = json.loads(self.template_data)
         else:
             template_data = self.template_data

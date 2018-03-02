@@ -115,6 +115,7 @@ class PermissionsBasedSerializerMixin(UserContextSerializerMixin):
         )
 
         allowed_fields_names = map(lambda p: p.target.split('.')[-1], allowed_permissions)
+        allowed_fields_names = [p.target.split('.')[-1] for p in allowed_permissions]
         disallowed_fields_names = map(lambda p: p.target.split('.')[-1], disallowed_permissions)
 
         # PK allowed be default
@@ -150,7 +151,9 @@ class PermissionsBasedSerializerMixin(UserContextSerializerMixin):
             self.permissions
         )
 
-        allowed_fields_names = map(lambda p: p.target.split('.')[-1], allowed_permissions)
+        allowed_fields_names = [
+            p.target.split('.')[-1] for p in allowed_permissions
+        ]
         disallowed_fields_names = map(lambda p: p.target.split('.')[-1], disallowed_permissions)
 
         # PK allowed be default

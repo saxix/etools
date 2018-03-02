@@ -5,6 +5,7 @@ import itertools
 from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import F, Sum
+from django.utils.encoding import force_text
 
 from celery.utils.log import get_task_logger
 
@@ -28,7 +29,7 @@ def get_intervention_context(intervention):
     Helper function for some of the notification tasks in this file.
     '''
     return {
-        'number': unicode(intervention),
+        'number': force_text(intervention),
         'partner': intervention.agreement.partner.name,
         'start_date': str(intervention.start),
         'url': 'https://{}/pmp/interventions/{}/details'.format(settings.HOST, intervention.id),

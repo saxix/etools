@@ -4,6 +4,7 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
+from operator import attrgetter
 
 from django.core import mail
 from django.core.urlresolvers import reverse
@@ -30,42 +31,45 @@ class StateMachineTest(APITenantTestCase):
     def test_possible_transitions(self):
         travel = TravelFactory()
         transition_mapping = defaultdict(list)
-        for transition in list(travel._meta.get_field('status').get_all_transitions(travel.__class__)):
+        for transition in sorted(
+                travel._meta.get_field('status').get_all_transitions(travel.__class__),
+                key=attrgetter('target')
+        ):
             transition_mapping[transition.source].append(transition.target)
 
         # mapping == {source: [target list]}
         self.assertEqual(dict(transition_mapping),
                          {'*': ['planned'],
-                          'approved': ['sent_for_payment',
-                                       'cancelled',
-                                       'completed'],
-                          'cancelled': ['submitted',
+                          'approved': ['cancelled',
+                                       'completed',
+                                       'sent_for_payment'],
+                          'cancelled': ['completed',
                                         'planned',
-                                        'completed'],
+                                        'submitted'],
                           'certification_approved': ['certification_rejected',
                                                      'certified'],
                           'certification_rejected': ['certification_submitted'],
-                          'certification_submitted': ['certification_rejected',
-                                                      'certification_approved'],
-                          'certified': ['sent_for_payment',
+                          'certification_submitted': ['certification_approved',
+                                                      'certification_rejected'],
+                          'certified': ['cancelled',
                                         'certification_submitted',
-                                        'cancelled',
-                                        'completed'],
-                          'planned': ['submitted',
-                                      'cancelled',
-                                      'completed'],
-                          'rejected': ['submitted',
+                                        'completed',
+                                        'sent_for_payment'],
+                          'planned': ['cancelled',
+                                      'completed',
+                                      'submitted'],
+                          'rejected': ['cancelled',
                                        'planned',
-                                       'cancelled'],
-                          'sent_for_payment': ['sent_for_payment',
-                                               'submitted',
-                                               'certified',
+                                       'submitted'],
+                          'sent_for_payment': ['cancelled',
                                                'certification_submitted',
-                                               'cancelled'],
-                          'submitted': ['rejected',
+                                               'certified',
+                                               'sent_for_payment',
+                                               'submitted'],
+                          'submitted': ['approved',
                                         'cancelled',
-                                        'approved',
-                                        'completed']})
+                                        'completed',
+                                        'rejected']})
 
     def test_state_machine_flow(self):
         currency = CurrencyFactory()

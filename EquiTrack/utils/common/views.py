@@ -82,7 +82,7 @@ class FSMTransitionActionMixin(object):
             raise ValidationError(dict([error for error in ex]))
 
         fsm_meta = instance_action._django_fsm
-        field_name = fsm_meta.field if isinstance(fsm_meta.field, six.string_types) else fsm_meta.field.name
+        field_name = fsm_meta.field if isinstance(fsm_meta.field, six.text_type) else fsm_meta.field.name
         transition_serializer = fsm_meta.get_transition(getattr(instance, field_name)).custom.get('serializer')
         if transition_serializer:
             serializer = transition_serializer(data=request.data)

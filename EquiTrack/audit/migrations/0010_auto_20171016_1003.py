@@ -11,7 +11,7 @@ from django.utils import six
 def unwrap_risks_extra(apps, schema_editor):
     Risk = apps.get_model('audit', 'Risk')
     for risk in Risk.objects.filter(extra__isnull=False):
-        if not isinstance(risk.extra, six.string_types):
+        if not isinstance(risk.extra, six.text_type):
             continue
 
         risk.extra = json.loads(risk.extra)

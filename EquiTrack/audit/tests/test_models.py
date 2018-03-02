@@ -7,6 +7,7 @@ from unittest import skipIf, TestCase
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.db import connection
+from django.utils.encoding import force_text
 
 from audit.models import (
     Auditor,
@@ -71,162 +72,162 @@ class EngagementStaffMemberTestCase(EToolsTenantTestCase):
 
 @skipIf(sys.version_info.major == 3, "This test can be deleted under Python 3")
 class TestStrUnicode(TestCase):
-    '''Ensure calling str() on model instances returns UTF8-encoded text and unicode() returns unicode.'''
+    '''Ensure calling str() on model instances returns UTF8-encoded text and force_text() returns unicode.'''
     def test_auditor_staff_member(self):
         user = UserFactory.build(first_name='Bugs', last_name='Bunny')
         instance = AuditorStaffMemberFactory.build(user=user)
         self.assertEqual(str(instance), b'Bugs Bunny')
-        self.assertEqual(unicode(instance), 'Bugs Bunny')
+        self.assertEqual(force_text(instance), 'Bugs Bunny')
 
         user = UserFactory.build(first_name='Harald', last_name='H\xe5rdr\xe5da')
         instance = AuditorStaffMemberFactory.build(user=user)
         self.assertEqual(str(instance), b'Harald H\xc3\xa5rdr\xc3\xa5da')
-        self.assertEqual(unicode(instance), 'Harald H\xe5rdr\xe5da')
+        self.assertEqual(force_text(instance), 'Harald H\xe5rdr\xe5da')
 
     def test_purchase_order(self):
         instance = PurchaseOrderFactory.build(order_number=b'two')
         self.assertEqual(str(instance), b'two')
-        self.assertEqual(unicode(instance), 'two')
+        self.assertEqual(force_text(instance), 'two')
 
         instance = PurchaseOrderFactory.build(order_number='tv\xe5')
         self.assertEqual(str(instance), b'tv\xc3\xa5')
-        self.assertEqual(unicode(instance), 'tv\xe5')
+        self.assertEqual(force_text(instance), 'tv\xe5')
 
     def test_engagement(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         instance = EngagementFactory.build(agreement=purchase_order)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         instance = EngagementFactory.build(agreement=purchase_order)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_rick_category(self):
         instance = RiskCategoryFactory.build(header='two')
         self.assertEqual(str(instance), b'RiskCategory two')
-        self.assertEqual(unicode(instance), 'RiskCategory two')
+        self.assertEqual(force_text(instance), 'RiskCategory two')
 
         instance = RiskCategoryFactory.build(header='tv\xe5')
         self.assertEqual(str(instance), b'RiskCategory tv\xc3\xa5')
-        self.assertEqual(unicode(instance), 'RiskCategory tv\xe5')
+        self.assertEqual(force_text(instance), 'RiskCategory tv\xe5')
 
     def test_risk_blueprint(self):
         risk_category = RiskCategoryFactory.build(header='two')
         instance = RiskBluePrintFactory.build(category=risk_category)
         self.assertEqual(str(instance), b'RiskBluePrint at two')
-        self.assertEqual(unicode(instance), 'RiskBluePrint at two')
+        self.assertEqual(force_text(instance), 'RiskBluePrint at two')
 
         risk_category = RiskCategoryFactory.build(header='tv\xe5')
         instance = RiskBluePrintFactory.build(category=risk_category)
         self.assertEqual(str(instance), b'RiskBluePrint at tv\xc3\xa5')
-        self.assertEqual(unicode(instance), 'RiskBluePrint at tv\xe5')
+        self.assertEqual(force_text(instance), 'RiskBluePrint at tv\xe5')
 
     def test_risk(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         engagement = EngagementFactory.build(agreement=purchase_order)
         instance = RiskFactory.build(engagement=engagement)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         engagement = EngagementFactory.build(agreement=purchase_order)
         instance = RiskFactory.build(engagement=engagement)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_spot_check(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         instance = SpotCheckFactory.build(agreement=purchase_order)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         instance = SpotCheckFactory.build(agreement=purchase_order)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_finding(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         spot_check = SpotCheckFactory.build(agreement=purchase_order)
         instance = FindingFactory.build(spot_check=spot_check)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         spot_check = SpotCheckFactory.build(agreement=purchase_order)
         instance = FindingFactory.build(spot_check=spot_check)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_micro_assessment(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         instance = MicroAssessmentFactory.build(agreement=purchase_order)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         instance = MicroAssessmentFactory.build(agreement=purchase_order)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_detail_finding_info(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         micro = MicroAssessmentFactory.build(agreement=purchase_order)
         instance = DetailedFindingInfoFactory.build(micro_assesment=micro)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         micro = MicroAssessmentFactory.build(agreement=purchase_order)
         instance = DetailedFindingInfoFactory.build(micro_assesment=micro)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_audit(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         instance = AuditFactory.build(agreement=purchase_order)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         instance = AuditFactory.build(agreement=purchase_order)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_special_audit(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         instance = SpecialAuditFactory.build(agreement=purchase_order)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         instance = SpecialAuditFactory.build(agreement=purchase_order)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_engagement_action_point(self):
         purchase_order = PurchaseOrderFactory.build(order_number='two')
         engagement = EngagementFactory.build(agreement=purchase_order)
         instance = EngagementActionPointFactory.build(engagement=engagement)
         self.assertIn(b' two,', str(instance))
-        self.assertIn(' two,', unicode(instance))
+        self.assertIn(' two,', force_text(instance))
 
         purchase_order = PurchaseOrderFactory.build(order_number='tv\xe5')
         engagement = EngagementFactory.build(agreement=purchase_order)
         instance = EngagementActionPointFactory.build(engagement=engagement)
         self.assertIn(b' tv\xc3\xa5,', str(instance))
-        self.assertIn(' tv\xe5,', unicode(instance))
+        self.assertIn(' tv\xe5,', force_text(instance))
 
     def test_audit_permission(self):
         instance = AuditPermissionFactory.build(user_type='two')
         self.assertIn(b'two', str(instance))
-        self.assertIn('two', unicode(instance))
+        self.assertIn('two', force_text(instance))
 
         instance = AuditPermissionFactory.build(user_type='tv\xe5')
         self.assertIn(b'tv\xc3\xa5', str(instance))
-        self.assertIn('tv\xe5', unicode(instance))
+        self.assertIn('tv\xe5', force_text(instance))
 
 
 class TestPurchaseOrder(EToolsTenantTestCase):

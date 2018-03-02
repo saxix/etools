@@ -2,9 +2,10 @@ from __future__ import unicode_literals
 
 import json
 from datetime import datetime
-from StringIO import StringIO
 
 from django.core.urlresolvers import reverse
+from django.utils import six
+from six import StringIO
 import factory
 from freezegun import freeze_time
 from pytz import UTC
@@ -114,7 +115,7 @@ class TravelDetails(URLAssertionMixin, APITenantTestCase):
         )
         self.assertEqual(response_json[0]["id"], attachment.pk)
 
-    def test_travel_attachment_unicode(self):
+    def test_travel_attachment_force_text(self):
         attachment = TravelAttachmentFactory(
             travel=self.travel,
             name=u'\u0628\u0631\u0646\u0627\u0645\u062c \u062a\u062f\u0631\u064a\u0628 \u0627\u0644\u0645\u062a\u0627\u0628\u0639\u064a\u0646.pdf',  # noqa
@@ -145,7 +146,7 @@ class TravelDetails(URLAssertionMixin, APITenantTestCase):
                                                      name='test_attachment',
                                                      type='document')
         attachment.file.save('fake.txt', fakefile)
-        self.assertGreater(fakefile.len, 0)
+        self.assertGreater(len(fakefile.getvalue()), 0)
         fakefile.seek(0)
 
         data = {'name': 'second',
@@ -438,7 +439,7 @@ class TravelDetails(URLAssertionMixin, APITenantTestCase):
                                         data=data, user=self.traveler)
         response_json = json.loads(response.rendered_content)
 
-        self.assertItemsEqual(response_json['activities'][0]['locations'], [location.id, location_2.id])
+        six.assertCountEqual(self, response_json['activities'][0]['locations'], [location.id, location_2.id])
         self.assertEqual(response_json['activities'][1]['locations'], [location_3.id])
 
     def test_activity_results(self):
