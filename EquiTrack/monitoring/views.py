@@ -29,7 +29,6 @@ class CheckView(View):
                     for service_id, result in results.items() if not result.success
                 )
             )
-            print(response)
             return HttpResponse(response, status=500, content_type='text/plain')
         else:
             return HttpResponse(
