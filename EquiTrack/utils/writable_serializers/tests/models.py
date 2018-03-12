@@ -17,7 +17,7 @@ class GenericChild(models.Model):
 
 class CodedGenericChild(models.Model):
     object_id = models.IntegerField()
-    content_type = models.ForeignKey(ContentType, related_name='coded_generic_chield')
+    content_type = models.ForeignKey(ContentType, related_name='coded_generic_child')
     obj = GenericForeignKey()
 
     code = models.CharField(max_length=10, blank=True)
