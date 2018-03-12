@@ -43,7 +43,7 @@ jobs:
             . env1/bin/activate
             cd EquiTrack
             mkdir media
-            tox -e python2.7
+            tox
       - store_artifacts:
           path: test-reports/
           destination: tr1
