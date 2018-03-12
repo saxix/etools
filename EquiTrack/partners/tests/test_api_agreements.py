@@ -83,7 +83,10 @@ class TestAgreementsAPI(APITenantTestCase):
         }
         status_code, response = self.run_request_list_ep(data)
 
-        self.assertEqual(status_code, status.HTTP_201_CREATED)
+        if status_code != status.HTTP_201_CREATED:
+            self.fail("STATUS NOT 201: %d.  Response: %s" % (status_code, response))
+
+        self.assertEqual(status_code, status.HTTP_201_CREATED)  # GETTING 400?
         self.assertEqual(response['agreement_type'], Agreement.PCA)
         self.assertEqual(
             Activity.objects.filter(action=Activity.CREATE).count(),

@@ -43,7 +43,7 @@ jobs:
             . env1/bin/activate
             cd EquiTrack
             mkdir media
-            tox
+            tox -e python2.7 -- partners.tests.test_api_agreements.TestAgreementsAPI.test_add_new_PCA
       - store_artifacts:
           path: test-reports/
           destination: tr1
