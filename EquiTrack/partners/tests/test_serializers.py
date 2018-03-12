@@ -621,18 +621,12 @@ class TestAgreementSerializerTransitions(AgreementCreateUpdateSerializerBase):
 
         self.assertSimpleExceptionFundamentals(
             context_manager,
-            'Agreement cannot transition to signed unless the end date is today or after'
+            'Agreement cannot transition to signed unless the end date is defined'
         )
 
-        # Populate end date, but with an invalid date.
+        # Populate end date with a date in the past - should pass validation for MOU's
         agreement.end = self.today - datetime.timedelta(days=3)
-        with self.assertRaises(serializers.ValidationError) as context_manager:
-            serializer.validate(data=data)
-
-        self.assertSimpleExceptionFundamentals(
-            context_manager,
-            'Agreement cannot transition to signed unless the end date is today or after'
-        )
+        self.assertTrue(serializer.validate(data=data))
 
         # Fix end date
         agreement.end = self.today
@@ -720,7 +714,7 @@ class TestPartnerOrganizationDetailSerializer(EToolsTenantTestCase):
         ])
 
         self.assertItemsEqual(data['planned_engagement'].keys(), [
-            'id', 'partner', 'scheduled_audit', 'special_audit', 'spot_check_follow_up_q1', 'spot_check_follow_up_q2',
+            'id', 'scheduled_audit', 'special_audit', 'spot_check_follow_up_q1', 'spot_check_follow_up_q2',
             'spot_check_follow_up_q3', 'spot_check_follow_up_q4', 'spot_check_mr',
             'total_spot_check_follow_up_required', 'spot_check_required', 'required_audit'
         ])
