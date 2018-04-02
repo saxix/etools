@@ -18,7 +18,4 @@ coverage erase
 time coverage run manage.py test --noinput --keepdb "$@"
 coverage report -m
 
-# Check code style unless running under tox, in which case tox runs flake8 separately
-if [[ $RUNNING_UNDER_TOX != 1 ]] ; then
-    time flake8 --config .flake8
-fi
+flake8 --config .flake8
