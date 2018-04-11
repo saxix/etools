@@ -5,7 +5,7 @@ import json
 import logging
 
 from django.db import transaction
-from django.utils import six
+
 
 from reports.models import CountryProgramme, Indicator, Result, ResultType
 from vision.utils import wcf_json_date_as_date
@@ -348,7 +348,7 @@ class RAMSynchronizer(VisionDataSynchronizer):
         mapped_records = {}
         for r in records:
             a = r['WBS_ELEMENT_CODE']
-            code = six.text_type(r['INDICATOR_CODE'])
+            code = str(r['INDICATOR_CODE'])
             mapped_records[code] = {
                 'name': r['INDICATOR_DESCRIPTION'][:1024],
                 'baseline': r['BASELINE'][:255],

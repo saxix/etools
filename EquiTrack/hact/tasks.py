@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 from django.db import connection
-from django.utils import six
+
 
 from celery.utils.log import get_task_logger
 
@@ -24,7 +24,7 @@ def update_hact_values():
         connection.set_tenant(country)
         for partner in PartnerOrganization.objects.all():
             hact = json.loads(partner.hact_values) if isinstance(
-                partner.hact_values, (six.text_type, six.string_types, six.binary_type)) else partner.hact_values
+                partner.hact_values, (str, bytes)) else partner.hact_values
             audits = Audit.objects.filter(partner=partner, status=Engagement.FINAL,
                                           date_of_draft_report_to_unicef__year=datetime.now().year)
             hact['outstanding_findings'] = sum([

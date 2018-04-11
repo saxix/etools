@@ -3,11 +3,11 @@ from __future__ import unicode_literals
 import csv
 import json
 from datetime import datetime, timedelta
-from django.utils.six import StringIO
+from io import StringIO
 
 from django.core import mail
 from django.core.urlresolvers import reverse
-from django.utils import six
+
 from freezegun import freeze_time
 from pytz import UTC
 
@@ -303,9 +303,9 @@ class ActionPoints(URLAssertionMixin, BaseTenantTestCase):
                           'Assigned By',
                           'URL'])
 
-        self.assertTrue(isinstance(rows[1][4], six.string_types))
+        self.assertTrue(isinstance(rows[1][4], str))
         self.assertFalse(rows[1][4].isdigit())
-        self.assertTrue(isinstance(rows[1][9], six.string_types))
+        self.assertTrue(isinstance(rows[1][9], str))
         self.assertFalse(rows[1][9].isdigit())
 
     def test_mail_on_first_save(self):

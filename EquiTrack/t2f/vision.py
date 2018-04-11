@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 from decimal import Decimal
 from functools import wraps
+from io import BytesIO
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -12,7 +13,7 @@ from django.core.urlresolvers import reverse
 from django.db import connection
 from django.db.models.query_utils import Q
 from django.utils.datastructures import MultiValueDict
-from django.utils import six
+
 
 from notification.utils import send_notification_using_templates
 from t2f.models import Invoice
@@ -76,7 +77,7 @@ class InvoiceExport(object):
 
     def generate_vendor_node(self, main, invoice):
         vendor = ET.SubElement(main, 'vendor')
-        ET.SubElement(vendor, 'amount').text = six.text_type(invoice.amount.quantize(Decimal('1.000')))
+        ET.SubElement(vendor, 'amount').text = str(invoice.amount.quantize(Decimal('1.000')))
         ET.SubElement(vendor, 'posting_key').text = self.get_posting_key(invoice.amount)
         ET.SubElement(vendor, 'vendor').text = invoice.vendor_number
         ET.SubElement(vendor, 'payment_terms')
@@ -90,8 +91,8 @@ class InvoiceExport(object):
 
     def _generate_expense_node(self, main, invoice_item, item_no):
         expense = ET.SubElement(main, 'expense')
-        ET.SubElement(expense, 'amount').text = six.text_type(invoice_item.amount.quantize(Decimal('1.000')))
-        ET.SubElement(expense, 'item_no').text = six.text_type(item_no)
+        ET.SubElement(expense, 'amount').text = str(invoice_item.amount.quantize(Decimal('1.000')))
+        ET.SubElement(expense, 'item_no').text = str(item_no)
         ET.SubElement(expense, 'posting_key').text = self.get_posting_key(invoice_item.amount)
         ET.SubElement(expense, 'wbs').text = invoice_item.wbs.name
         ET.SubElement(expense, 'grant').text = invoice_item.grant.name
@@ -110,7 +111,7 @@ class InvoiceExport(object):
         # root is an Element
         # Doing it this way makes the results consistent between Python 2 & 3
         tree = ET.ElementTree(root)
-        buffer = six.BytesIO()
+        buffer = BytesIO()
         tree.write(buffer, xml_declaration=True, encoding='utf-8')
         return buffer.getvalue()
 

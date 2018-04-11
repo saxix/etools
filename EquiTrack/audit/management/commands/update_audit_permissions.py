@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from django.core.management import BaseCommand
 from django.db import connection
-from django.utils import six
+
 
 from tenant_schemas.utils import get_tenant_model
 
@@ -99,10 +99,10 @@ class Command(BaseCommand):
         })
 
     def _update_permissions(self, status, roles, perm_type, perm, targets):
-        if isinstance(roles, six.string_types):
+        if isinstance(roles, str):
             roles = [roles, ]
 
-        if isinstance(targets, six.string_types):
+        if isinstance(targets, str):
             targets = [targets, ]
 
         for role in roles:

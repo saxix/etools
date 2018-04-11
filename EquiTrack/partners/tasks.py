@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import csv
 import datetime
+from io import StringIO
 import itertools
 
 from django.conf import settings
@@ -9,10 +10,8 @@ from django.core.mail.message import EmailMessage
 from django.db import connection, transaction
 from django.db.models import F, Sum
 from django.db.models.functions import Coalesce
-from django.db.utils import six
 
 from celery.utils.log import get_task_logger
-from six import StringIO
 
 from EquiTrack.celery import app
 from notification.utils import send_notification_using_email_template
@@ -35,9 +34,9 @@ def get_intervention_context(intervention):
     Helper function for some of the notification tasks in this file.
     '''
     return {
-        'number': six.text_type(intervention),
+        'number': str(intervention),
         'partner': intervention.agreement.partner.name,
-        'start_date': six.text_type(intervention.start),
+        'start_date': str(intervention.start),
         'url': 'https://{}/pmp/interventions/{}/details'.format(settings.HOST, intervention.id),
         'unicef_focal_points': [focal_point.email for focal_point in intervention.unicef_focal_points.all()]
     }
@@ -84,7 +83,7 @@ def _make_agreement_status_automatic_transitions(country_name):
                 bad_agreements.append(agr)
 
     logger.error('Bad agreements {}'.format(len(bad_agreements)))
-    logger.error('Bad agreements ids: ' + ' '.join(six.text_type(a.id) for a in bad_agreements))
+    logger.error('Bad agreements ids: ' + ' '.join(str(a.id) for a in bad_agreements))
     logger.info('Total agreements {}'.format(signed_ended_agrs.count()))
     logger.info("Transitioned agreements {} ".format(processed))
 
@@ -146,7 +145,7 @@ def _make_intervention_status_automatic_transitions(country_name):
                 bad_interventions.append(intervention)
 
     logger.error('Bad interventions {}'.format(len(bad_interventions)))
-    logger.error('Bad interventions ids: ' + ' '.join(six.text_type(a.id) for a in bad_interventions))
+    logger.error('Bad interventions ids: ' + ' '.join(str(a.id) for a in bad_interventions))
     logger.info('Total interventions {}'.format(active_ended.count() + qs.count()))
     logger.info("Transitioned interventions {} ".format(processed))
 
@@ -288,7 +287,7 @@ def pmp_indicator_report():
                 planned_budget = getattr(intervention, 'planned_budget', None)
                 writer.writerow({
                     'Country': country,
-                    'Partner Name': six.string_types(partner).decode('unicode_escape').encode('ascii', 'ignore'),
+                    'Partner Name': str(partner).encode('unicode_escape', 'ignore'),
                     'Partner Type': partner.cso_type,
                     'PD / SSFA ref': intervention.number.encode('utf-8').replace(',', '-'),
                     'PD / SSFA status': intervention.get_status_display(),

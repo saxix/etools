@@ -8,7 +8,6 @@ from django.db import models
 from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.db.utils import IntegrityError
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
@@ -74,7 +73,6 @@ class TravelAgent(SoftDeleteMixin, models.Model):
                                         verbose_name=_('Expense Type'))
 
 
-@python_2_unicode_compatible
 class TravelExpenseType(SoftDeleteMixin, models.Model):
     # User related expense types have this placeholder as the vendor code
     USER_VENDOR_NUMBER_PLACEHOLDER = 'user'
@@ -97,7 +95,6 @@ class TravelExpenseType(SoftDeleteMixin, models.Model):
         return self.title
 
 
-@python_2_unicode_compatible
 class Currency(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=128, verbose_name=_('Name'))
     code = models.CharField(max_length=5, verbose_name=_('Code'))
@@ -120,7 +117,6 @@ class ExchangeRate(SoftDeleteMixin, models.Model):
         ordering = ('valid_from',)
 
 
-@python_2_unicode_compatible
 class AirlineCompany(SoftDeleteMixin, models.Model):
     # This will be populated from vision
     name = models.CharField(max_length=255, verbose_name=_('Name'))
@@ -136,7 +132,6 @@ class AirlineCompany(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class BusinessRegion(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=16, verbose_name=_('Name'))
     code = models.CharField(max_length=2, verbose_name=_('Code'))
@@ -145,7 +140,6 @@ class BusinessRegion(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class BusinessArea(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=128, verbose_name=_('Name'))
     code = models.CharField(max_length=32, verbose_name=_('Code'))
@@ -156,7 +150,6 @@ class BusinessArea(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class WBS(SoftDeleteMixin, models.Model):
     business_area = models.ForeignKey('BusinessArea', null=True, verbose_name=_('Business Area'))
     name = models.CharField(max_length=25, verbose_name=_('Name'))
@@ -169,7 +162,6 @@ class WBS(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Grant(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=25, verbose_name=_('Name'))
     funds = models.ManyToManyField('Fund', related_name='grants', verbose_name=_('Funds'))
@@ -178,7 +170,6 @@ class Grant(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Fund(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=25, verbose_name=_('Name'))
 
@@ -186,7 +177,6 @@ class Fund(SoftDeleteMixin, models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Country(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=64, verbose_name=_('Name'))
     long_name = models.CharField(max_length=128, verbose_name=_('Long Name'))
@@ -219,7 +209,6 @@ class DSARegionQuerySet(ValidityQuerySet):
         DSARate.objects.filter(region__in=self).expire()
 
 
-@python_2_unicode_compatible
 class DSARegion(SoftDeleteMixin, models.Model):
     country = models.ForeignKey('Country', related_name='dsa_regions', verbose_name=_('Country'))
     area_name = models.CharField(max_length=120, verbose_name=_('Area Name'))
@@ -269,7 +258,6 @@ class DSARateQuerySet(QuerySet):
         rates_to_expire.update(effective_to_date=now().date() - timedelta(days=1))
 
 
-@python_2_unicode_compatible
 class DSARate(models.Model):
     DEFAULT_EFFECTIVE_TILL = date(2999, 12, 31)
 

@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import random
 
 from django.core.management import call_command
-from django.utils import six
+
 from factory import fuzzy
 from rest_framework import status
 
@@ -30,7 +30,7 @@ class EngagementCheckTransitionsTestCaseMixin(object):
 
         self.assertEqual(response.status_code, expected_response)
         if errors:
-            six.assertCountEqual(self, response.data.keys(), errors or [])
+            self.assertCountEqual(response.data.keys(), errors or [])
 
     def _test_submit(self, user, expected_response, errors=None, data=None):
         return self._test_transition(user, 'submit', expected_response, errors=errors, data=data)
@@ -227,7 +227,7 @@ class EngagementCheckTransitionsMetadataTestCaseMixin(object):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         action_codes = [action['code'] for action in response.data['actions']['allowed_FSM_transitions']]
-        six.assertCountEqual(self, action_codes, actions)
+        self.assertCountEqual(action_codes, actions)
 
 
 class TestSCTransitionsMetadataTestCase(

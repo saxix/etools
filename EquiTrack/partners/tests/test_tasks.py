@@ -6,7 +6,7 @@ from decimal import Decimal
 from pprint import pformat
 
 from django.conf import settings
-from django.utils import six, timezone
+from django.utils import timezone
 
 import mock
 
@@ -56,7 +56,7 @@ class TestGetInterventionContext(BaseTenantTestCase):
         self.assertIsInstance(result, dict)
         self.assertEqual(sorted(result.keys()),
                          sorted(['number', 'partner', 'start_date', 'url', 'unicef_focal_points']))
-        self.assertEqual(result['number'], six.text_type(self.intervention))
+        self.assertEqual(result['number'], str(self.intervention))
         self.assertEqual(result['partner'], self.intervention.agreement.partner.name)
         self.assertEqual(result['start_date'], 'None')
         self.assertEqual(result['url'],
@@ -76,7 +76,7 @@ class TestGetInterventionContext(BaseTenantTestCase):
         self.assertIsInstance(result, dict)
         self.assertEqual(sorted(result.keys()),
                          sorted(['number', 'partner', 'start_date', 'url', 'unicef_focal_points']))
-        self.assertEqual(result['number'], six.text_type(self.intervention))
+        self.assertEqual(result['number'], str(self.intervention))
         self.assertEqual(result['partner'], self.intervention.agreement.partner.name)
         self.assertEqual(result['start_date'], '2017-08-01')
         self.assertEqual(result['url'],

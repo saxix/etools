@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from six.moves import urllib_parse
+from urllib.parse import urljoin
 
 from django.db.models import Q
 from django.http import HttpResponseNotFound, HttpResponseRedirect
@@ -37,5 +37,5 @@ class AttachmentFileView(DetailView):
             return HttpResponseNotFound(
                 _("Attachment has no file or hyperlink")
             )
-        url = urllib_parse.urljoin(site_url(), attachment.url)
+        url = urljoin(site_url(), attachment.url)
         return HttpResponseRedirect(url)

@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import datetime
 import tempfile
 
-from django.utils import six
+
 from rest_framework import status
 from tablib.core import Dataset
 
@@ -150,25 +150,25 @@ class TestModelExport(BaseTenantTestCase):
         ])
 
         self.assertEqual(dataset[0], (
-            six.text_type(self.intervention.agreement.partner.name),
-            six.text_type(self.intervention.agreement.partner.vendor_number),
+            str(self.intervention.agreement.partner.name),
+            str(self.intervention.agreement.partner.vendor_number),
             self.intervention.status,
             self.intervention.agreement.partner.partner_type,
             self.intervention.agreement.agreement_number,
-            six.text_type(self.intervention.country_programme.name),
+            str(self.intervention.country_programme.name),
             self.intervention.document_type,
             self.intervention.number,
-            six.text_type(self.intervention.title),
+            str(self.intervention.title),
             '{}'.format(self.intervention.start),
             '{}'.format(self.intervention.end),
             u'',
             u'',
             u'',
-            six.text_type("Yes" if self.intervention.contingency_pd else "No"),
+            "Yes" if self.intervention.contingency_pd else "No",
             u'',
             u'',
             u'',
-            six.text_type(self.ib.currency),
+            str(self.ib.currency),
             u'{:.2f}'.format(self.intervention.total_partner_contribution),
             u'{:.2f}'.format(self.intervention.total_unicef_cash),
             u'{:.2f}'.format(self.intervention.total_in_kind_amount),
@@ -176,9 +176,9 @@ class TestModelExport(BaseTenantTestCase):
             u', '.join([fr.fr_numbers for fr in self.intervention.frs.all()]),
             u'',
             u'',
-            six.text_type(self.intervention.total_frs["total_frs_amt"]),
-            six.text_type(self.intervention.total_frs["total_actual_amt"]),
-            six.text_type(self.intervention.total_frs["total_outstanding_amt"]),
+            str(self.intervention.total_frs["total_frs_amt"]),
+            str(self.intervention.total_frs["total_actual_amt"]),
+            str(self.intervention.total_frs["total_outstanding_amt"]),
             u'{} (Q1:{} Q2:{}, Q3:{}, Q4:{})'.format(self.planned_visit.year,
                                                      self.planned_visit.programmatic_q1,
                                                      self.planned_visit.programmatic_q2,
@@ -193,10 +193,10 @@ class TestModelExport(BaseTenantTestCase):
             '{}'.format(self.intervention.signed_by_unicef_date),
             '{}'.format(self.intervention.days_from_submission_to_signed),
             '{}'.format(self.intervention.days_from_review_to_signed),
-            six.text_type(self.intervention.amendments.count()),
+            str(self.intervention.amendments.count()),
             u'',
-            six.text_type(', '.join(['{}'.format(att.type.name) for att in self.intervention.attachments.all()])),
-            six.text_type(self.intervention.attachments.count()),
+            ', '.join(['{}'.format(att.type.name) for att in self.intervention.attachments.all()]),
+            str(self.intervention.attachments.count()),
             u'',
             u'https://testserver/pmp/interventions/{}/details/'.format(self.intervention.id),
         ))
@@ -232,8 +232,8 @@ class TestModelExport(BaseTenantTestCase):
         exported_agreement = dataset[-1]
         self.assertEqual(exported_agreement, (
             self.agreement.agreement_number,
-            six.text_type(self.agreement.status),
-            six.text_type(self.agreement.partner.name),
+            str(self.agreement.status),
+            str(self.agreement.partner.name),
             self.agreement.agreement_type,
             '{}'.format(self.agreement.start),
             '{}'.format(self.agreement.end),
@@ -286,7 +286,7 @@ class TestModelExport(BaseTenantTestCase):
         test_option = [e for e in dataset if e[0] == self.partner.vendor_number][0]
         self.assertEqual(test_option, (
             self.partner.vendor_number,
-            six.text_type(self.partner.name),
+            str(self.partner.name),
             self.partner.short_name,
             self.partner.alternate_name,
             "{}".format(self.partner.partner_type),

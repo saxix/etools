@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils import six
 
 from attachments.tests.factories import (
     AttachmentFactory,
@@ -14,10 +13,10 @@ from EquiTrack.tests.cases import BaseTenantTestCase
 class TestFileType(BaseTenantTestCase):
     def test_str(self):
         instance = AttachmentFileTypeFactory(label='xyz')
-        self.assertIn(u'xyz', six.text_type(instance))
+        self.assertIn(u'xyz', str(instance))
 
         instance = AttachmentFileTypeFactory(label='R\xe4dda Barnen')
-        self.assertIn('R\xe4dda Barnen', six.text_type(instance))
+        self.assertIn('R\xe4dda Barnen', str(instance))
 
 
 class TestAttachments(BaseTenantTestCase):
@@ -30,13 +29,13 @@ class TestAttachments(BaseTenantTestCase):
             file=SimpleUploadedFile('simple_file.txt', b'these are the file contents!'),
             content_object=self.simple_object
         )
-        self.assertIn('simple_file', six.text_type(instance))
+        self.assertIn('simple_file', str(instance))
 
         instance = AttachmentFactory(
             file=SimpleUploadedFile('simple_file.txt', u'R\xe4dda Barnen'.encode('utf-8')),
             content_object=self.simple_object
         )
-        self.assertIn('simple_file', six.text_type(instance))
+        self.assertIn('simple_file', str(instance))
 
     def test_filename(self):
         instance = AttachmentFactory(

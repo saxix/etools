@@ -3,7 +3,7 @@ from operator import itemgetter
 
 from django.core.urlresolvers import reverse
 from django.test import SimpleTestCase
-from django.utils import six
+
 from rest_framework import status
 from partners.tests.test_utils import setup_intervention_test_data
 from tablib.core import Dataset
@@ -94,8 +94,7 @@ class TestReportViews(BaseTenantTestCase):
         url = reverse('results-list')
         response = self.forced_auth_req('get', url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             [int(r["id"]) for r in response.data],
             [self.result1.pk, self.result2.pk]
         )
@@ -139,8 +138,7 @@ class TestOutputListAPIView(BaseTenantTestCase):
     def test_get(self):
         response = self.forced_auth_req('get', self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             [int(r["id"]) for r in response.data],
             [self.result1.pk, self.result2.pk]
         )
@@ -151,7 +149,7 @@ class TestOutputListAPIView(BaseTenantTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         first_response = sorted(response.data, key=itemgetter("id"))[0]
         keys = sorted(first_response.keys())
-        six.assertCountEqual(self, keys, ['id', 'name'])
+        self.assertCountEqual(keys, ['id', 'name'])
 
     def test_current_cp(self):
         response = self.forced_auth_req('get', self.url)
@@ -170,8 +168,7 @@ class TestOutputListAPIView(BaseTenantTestCase):
         data = {"country_programme": self.result1.country_programme.id}
         response = self.forced_auth_req('get', self.url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             [int(r["id"]) for r in response.data],
             [self.result1.pk, self.result2.pk]
         )
@@ -180,8 +177,7 @@ class TestOutputListAPIView(BaseTenantTestCase):
         data = {"result_type": self.result_type.name}
         response = self.forced_auth_req('get', self.url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             [int(r["id"]) for r in response.data],
             [self.result1.pk, self.result2.pk]
         )
@@ -213,8 +209,7 @@ class TestOutputListAPIView(BaseTenantTestCase):
         data = {"dropdown": "true"}
         response = self.forced_auth_req('get', self.url, data=data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             response.data, [
                 {
                     "wbs": self.result1.wbs,

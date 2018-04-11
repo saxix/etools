@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import json
 
-from django.utils import six
+
 from rest_framework import serializers
 
 from EquiTrack.mixins import ExportSerializerMixin
@@ -33,7 +33,7 @@ class AppliedIndicatorExportSerializer(serializers.ModelSerializer):
 
     def get_disaggregation(self, obj):
         res = obj.disaggregation
-        if isinstance(obj.disaggregation, six.text_type):
+        if isinstance(obj.disaggregation, str):
             res = json.loads(obj.disaggregation)
         return res
 

@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext as _
 
 from model_utils import Choices
@@ -9,7 +8,6 @@ from model_utils import Choices
 from utils.permissions.models.query import BasePermissionQueryset, StatusBasePermissionQueryset
 
 
-@python_2_unicode_compatible
 class BasePermission(models.Model):
     """
     Base model for store field level permissions.
@@ -69,7 +67,6 @@ class BasePermission(models.Model):
                 return choice[0]
 
 
-@python_2_unicode_compatible
 class StatusBasePermission(BasePermission):
     STATUSES = Choices(
         ('new', 'New instance'),

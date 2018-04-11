@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import functools
 import operator
 
 from django.db import models
-from django.utils import six
+
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import permissions
@@ -17,7 +18,7 @@ class HasCreatePermission(permissions.BasePermission):
         model = getattr(view, 'model', None) or view.get_queryset().model
         model_names = [model._meta.model_name] + [parent._meta.model_name
                                                   for parent in model._meta.get_parent_list()]
-        conditions = six.moves.reduce(operator.or_, [models.Q(target__startswith=model_name)
+        conditions = functools.reduce(operator.or_, [models.Q(target__startswith=model_name)
                                                      for model_name in model_names])
 
         permissions = AuditPermission.objects.filter(

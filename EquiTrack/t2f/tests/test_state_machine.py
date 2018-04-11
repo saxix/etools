@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.test.utils import override_settings
-from django.utils import six
+
 
 from EquiTrack.tests.cases import BaseTenantTestCase
 from publics.tests.factories import (
@@ -71,9 +71,9 @@ class StateMachineTest(BaseTenantTestCase):
                                   'approved',
                                   'completed']}
 
-        six.assertCountEqual(self, expected.keys(), transition_mapping.keys())
+        self.assertCountEqual(expected.keys(), transition_mapping.keys())
         for key in expected:
-            six.assertCountEqual(self, expected[key], transition_mapping[key])
+            self.assertCountEqual(expected[key], transition_mapping[key])
 
     def test_state_machine_flow(self):
         currency = PublicsCurrencyFactory()

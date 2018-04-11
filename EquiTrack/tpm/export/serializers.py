@@ -4,8 +4,6 @@ import itertools
 
 from future.backports.urllib.parse import urljoin
 
-from django.utils import six
-
 from rest_framework import serializers
 from rest_framework.fields import empty, SkipField
 
@@ -52,7 +50,7 @@ class CommaSeparatedExportField(serializers.Field):
         if self.export_attr:
             value = map(lambda x: get_attribute_smart(x, self.export_attr), value)
 
-        return ', '.join(map(six.text_type, filter(lambda x: x, value)))
+        return ', '.join(map(str, filter(lambda x: x, value)))
 
 
 class TPMActivityExportSerializer(serializers.Serializer):

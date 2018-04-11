@@ -14,7 +14,7 @@ from django.contrib.sites.models import Site
 from django.core import serializers
 from django.core.cache import cache
 from django.db import connection, models
-from django.utils import six
+
 from django.utils.cache import patch_cache_control
 
 import requests
@@ -63,7 +63,7 @@ def etag_cached(cache_key, public_cache=False):
     match the one sent along with the request.
     Otherwise it returns 304 NOT MODIFIED.
     """
-    assert isinstance(cache_key, six.string_types), 'Cache key has to be a string'
+    assert isinstance(cache_key, str), 'Cache key has to be a string'
 
     def make_cache_key():
         if public_cache:
@@ -244,5 +244,5 @@ def make_dictionary_serializable(data):
     """
     return {
         k: model_instance_to_dictionary(v) if isinstance(v, models.Model) else v
-        for k, v in six.iteritems(data)
+        for k, v in data.items()
     }

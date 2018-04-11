@@ -3,8 +3,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.utils import six
-from django.utils.six import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from django_fsm import FSMField, transition
@@ -14,10 +12,9 @@ from model_utils.models import TimeStampedModel
 
 from EquiTrack.utils import get_environment
 from action_points.conditions import ActionPointCompleteRequiredFieldsCheck
-from notification.models import Notification
+from notification.utils import send_notification_using_email_template
 
 
-@python_2_unicode_compatible
 class ActionPoint(TimeStampedModel):
     MODULE_CHOICES = Choices(
         ('t2f', _('Trip Management')),
@@ -120,7 +117,7 @@ class ActionPoint(TimeStampedModel):
             'person_responsible': self.assigned_to.get_full_name(),
             'assigned_by': self.assigned_by.get_full_name(),
             'reference_number': self.reference_number,
-            'implementing_partner': six.text_type(self.partner),
+            'implementing_partner': str(self.partner),
             'description': self.description,
             'due_date': self.due_date.strftime('%d %b %Y'),
             'object_url': 'link to follow up',
@@ -133,12 +130,12 @@ class ActionPoint(TimeStampedModel):
             'recipient': recipient.get_full_name(),
         }
 
-        notification = Notification.objects.create(
+        send_notification_using_email_template(
+            recipients=[recipient.email],
+            email_template_name=template_name,
+            context=context,
             sender=self,
-            recipients=[recipient.email], template_name=template_name,
-            template_data=context
         )
-        notification.send_notification()
 
     @transition(status, source=STATUSES.open, target=STATUSES.completed,
                 conditions=[

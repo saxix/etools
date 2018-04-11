@@ -3,8 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.utils import six
-from django.utils.encoding import python_2_unicode_compatible
+
 from django.utils.translation import ugettext as _
 
 from management.issues.exceptions import IssueFoundException
@@ -28,7 +27,6 @@ ISSUE_STATUS_CHOICES = (
 )
 
 
-@python_2_unicode_compatible
 class FlaggedIssue(models.Model):
     # generic foreign key to any object in the DB
     # https://docs.djangoproject.com/en/1.11/ref/contrib/contenttypes/#generic-relations
@@ -59,7 +57,7 @@ class FlaggedIssue(models.Model):
             # don't change status unless it was marked resolved
             if self.issue_status == ISSUE_STATUS_RESOLVED:
                 self.issue_status = ISSUE_STATUS_REACTIVATED
-            self.message = six.text_type(e)
+            self.message = str(e)
             self.save()
         else:
             self.issue_status = ISSUE_STATUS_RESOLVED

@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from django.utils import six
-
 from EquiTrack.tests.cases import BaseTenantTestCase
 from management.models import FlaggedIssue
 from management.tests.factories import FlaggedIssueFactory
@@ -9,7 +7,7 @@ from partners.tests.factories import PartnerFactory
 
 
 class TestStrUnicode(BaseTenantTestCase):
-    '''Ensure calling six.text_type() on model instances returns the right text.'''
+    '''Ensure calling str() on model instances returns the right text.'''
     def test_flagged_issue(self):
         partner = PartnerFactory()
         issue = FlaggedIssueFactory(
@@ -17,14 +15,14 @@ class TestStrUnicode(BaseTenantTestCase):
             issue_id="321",
             message='test message'
         )
-        self.assertEqual(six.text_type(issue), u"test message")
+        self.assertEqual(str(issue), u"test message")
 
         issue = FlaggedIssueFactory(
             content_object=partner,
             issue_id="321",
             message=u"R\xe4dda Barnen"
         )
-        self.assertEqual(six.text_type(issue), u"R\xe4dda Barnen")
+        self.assertEqual(str(issue), u"R\xe4dda Barnen")
 
 
 class FlaggedIssueTest(BaseTenantTestCase):

@@ -4,8 +4,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.utils import timezone, six
-from django.utils.encoding import python_2_unicode_compatible, force_text
+from django.utils import timezone
+from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
 from django_fsm import FSMField, transition
@@ -34,7 +34,6 @@ def _has_action_permission(action):
         has_action_permission(TPMPermission, instance=instance, user=user, action=action)
 
 
-@python_2_unicode_compatible
 class TPMVisit(SoftDeleteMixin, TimeStampedModel, models.Model):
 
     DRAFT = 'draft'
@@ -162,7 +161,7 @@ class TPMVisit(SoftDeleteMixin, TimeStampedModel, models.Model):
         base_context.update(context)
         context = base_context
 
-        if isinstance(recipients, six.string_types):
+        if isinstance(recipients, str):
             recipients = [recipients, ]
         else:
             recipients = list(recipients)
@@ -325,7 +324,6 @@ class TPMVisit(SoftDeleteMixin, TimeStampedModel, models.Model):
         return build_frontend_url('tpm', 'visits', self.id, 'details')
 
 
-@python_2_unicode_compatible
 class TPMVisitReportRejectComment(models.Model):
     rejected_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Rejected At'))
 
@@ -341,7 +339,6 @@ class TPMVisitReportRejectComment(models.Model):
         ordering = ['tpm_visit', 'id']
 
 
-@python_2_unicode_compatible
 class TPMActivity(Activity):
     tpm_visit = models.ForeignKey(TPMVisit, verbose_name=_('Visit'), related_name='tpm_activities')
 
@@ -392,7 +389,6 @@ class TPMActivity(Activity):
         }
 
 
-@python_2_unicode_compatible
 class TPMActionPoint(TimeStampedModel, models.Model):
     STATUSES = Choices(
         ('open', _('Open')),
@@ -466,7 +462,6 @@ class TPMPermissionsQueryset(StatusBasePermissionQueryset):
         return super(TPMPermissionsQueryset, self).filter(**kwargs)
 
 
-@python_2_unicode_compatible
 class TPMPermission(StatusBasePermission):
     STATUSES = StatusBasePermission.STATUSES + TPMVisit.STATUSES
 

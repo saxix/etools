@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from django.conf import settings
 from django.core.management import call_command
-from django.utils import six
+
 
 from mock import mock, patch
 from post_office.models import Email, EmailTemplate
@@ -28,7 +28,7 @@ class TestEmailNotification(BaseTenantTestCase):
         valid_notification = NotificationFactory()
         valid_notification.send_notification()
 
-        six.assertCountEqual(self, valid_notification.recipients, valid_notification.sent_recipients)
+        self.assertCountEqual(valid_notification.recipients, valid_notification.sent_recipients)
         self.assertEqual(Email.objects.count(), old_email_count + 1)
 
 

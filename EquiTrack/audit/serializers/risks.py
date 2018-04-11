@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from django.db import models
-from django.utils import six
+
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
@@ -26,7 +26,7 @@ class RiskSerializer(WritableNestedSerializerMixin, serializers.ModelSerializer)
         }
 
     def validate_extra(self, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             raise serializers.ValidationError('Invalid data type.')
         return value
 
@@ -209,7 +209,7 @@ class KeyInternalWeaknessSerializer(BaseAggregatedRiskRootSerializer):
                              self.fields['children'].child.fields['blueprints'].child.fields['risk'].fields['value']]
         for risk_value_field in risk_value_fields:
             del risk_value_field.choices[Risk.VALUES.significant]
-            del risk_value_field.choice_strings_to_values[six.text_type(Risk.VALUES.significant)]
+            del risk_value_field.choice_strings_to_values[str(Risk.VALUES.significant)]
             risk_value_field.choices[Risk.VALUES.na] = 'None'
 
     @staticmethod

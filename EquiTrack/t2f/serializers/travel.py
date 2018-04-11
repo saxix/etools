@@ -10,7 +10,7 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.query_utils import Q
 from django.utils.functional import cached_property
 from django.utils.itercompat import is_iterable
-from django.utils import six
+
 from django.utils.translation import ugettext
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -294,7 +294,7 @@ class TravelDetailsSerializer(PermissionBasedModelSerializer):
         # Check date integrity
         dates_iterator = chain.from_iterable((i['departure_date'], i['arrival_date']) for i in value)
 
-        current_date = six.next(dates_iterator)
+        current_date = next(dates_iterator)
         for date in dates_iterator:
             if date is None:
                 continue

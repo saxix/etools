@@ -8,8 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.utils import six
-from django.utils.encoding import python_2_unicode_compatible
+
 from django.utils.text import slugify
 from django.utils.translation import ugettext as _
 from future.backports.urllib.parse import urlsplit
@@ -18,7 +17,6 @@ from model_utils.models import TimeStampedModel
 from ordered_model.models import OrderedModel
 
 
-@python_2_unicode_compatible
 class FileType(OrderedModel, models.Model):
     name = models.CharField(max_length=64, verbose_name=_('Name'))
     label = models.CharField(max_length=64, verbose_name=_('Label'))
@@ -42,7 +40,6 @@ def generate_file_path(attachment, filename):
     )
 
 
-@python_2_unicode_compatible
 class Attachment(TimeStampedModel, models.Model):
     file_type = models.ForeignKey(FileType, verbose_name=_('Document Type'))
 
@@ -72,7 +69,7 @@ class Attachment(TimeStampedModel, models.Model):
         ordering = ['id', ]
 
     def __str__(self):
-        return six.text_type(self.file)
+        return str(self.file)
 
     def clean(self):
         super(Attachment, self).clean()
@@ -101,7 +98,6 @@ class Attachment(TimeStampedModel, models.Model):
         denormalize_attachment(self)
 
 
-@python_2_unicode_compatible
 class AttachmentFlat(models.Model):
     attachment = models.ForeignKey(Attachment)
     partner = models.CharField(max_length=255, blank=True, verbose_name=_('Partner'))
@@ -115,4 +111,4 @@ class AttachmentFlat(models.Model):
     created = models.CharField(max_length=50, verbose_name=_('Created'))
 
     def __str__(self):
-        return six.text_type(self.attachment)
+        return str(self.attachment)

@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest import skip
 
-from django.utils import six
+
 from pytz import UTC
 
 from EquiTrack.tests.cases import BaseTenantTestCase
@@ -111,7 +111,7 @@ class TestDASdto(BaseTenantTestCase):
             date.today(),
             self.amsterdam,
         )
-        self.assertEqual(six.text_type(self.dsa), res)
+        self.assertEqual(str(self.dsa), res)
 
 
 class TestDSACalculator(BaseTenantTestCase):

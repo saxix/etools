@@ -23,7 +23,7 @@ class TestJsonify(BaseTenantTestCase):
         j = utils.jsonify(model_to_dict(intervention))
         self.assertEqual(j["title"], intervention.title)
 
-    def test_jsonify_unicode(self):
+    def test_jsonify_nonascii(self):
         staff = PartnerStaffFactory(first_name=u'R\xe4dda')
         agreement = AgreementFactory(agreement_type=u'R\xe4dda')
         agreement.authorized_officers.add(staff)

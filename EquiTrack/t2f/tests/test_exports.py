@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from django.core.urlresolvers import reverse
-from django.utils.six import StringIO
+from io import StringIO
 from pytz import UTC
 
 from EquiTrack.tests.cases import BaseTenantTestCase

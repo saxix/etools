@@ -4,7 +4,7 @@ import datetime
 
 from django.contrib.auth.models import Group
 from django.db import connection
-from django.utils import timezone, six
+from django.utils import timezone
 
 import factory.fuzzy
 from factory import fuzzy
@@ -154,7 +154,7 @@ class UserFactory(BaseUserFactory):
         if extracted is not None:
             extracted = extracted[:]
             for i, group in enumerate(extracted):
-                if isinstance(group, six.string_types):
+                if isinstance(group, str):
                     extracted[i] = Group.objects.get_or_create(name=group)[0]
 
             self.groups.add(*extracted)

@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django.core.exceptions import ValidationError as CoreValidationError
 from django.db import ProgrammingError
 from django.http import Http404
-from django.utils import six
+
 
 from django_fsm import can_proceed, has_transition_perm
 from rest_framework import exceptions
@@ -82,7 +82,7 @@ class FSMTransitionActionMixin(object):
             raise ValidationError(dict([error for error in ex]))
 
         fsm_meta = instance_action._django_fsm
-        field_name = fsm_meta.field if isinstance(fsm_meta.field, six.string_types) else fsm_meta.field.name
+        field_name = fsm_meta.field if isinstance(fsm_meta.field, str) else fsm_meta.field.name
         transition_serializer = fsm_meta.get_transition(getattr(instance, field_name)).custom.get('serializer')
         if transition_serializer:
             serializer = transition_serializer(data=request.data)

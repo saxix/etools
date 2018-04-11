@@ -2,16 +2,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from django.db.models.query import QuerySet
 from django.forms import model_to_dict
-from django.utils import six
+
 
 from snapshot.models import Activity
 
 
 def jsonify(data):
     """Convert data into a dictionary that can be json encoded"""
-    allowed_types = six.integer_types + (
-        six.text_type,
+    allowed_types = (
+        str,
         bool,
+        int,
         dict,
         float,
         list,
@@ -22,7 +23,7 @@ def jsonify(data):
         if isinstance(value, QuerySet):
             data[key] = [v.pk for v in value]
         if not isinstance(value, allowed_types):
-            data[key] = six.text_type(data[key])
+            data[key] = str(data[key])
     return data
 
 

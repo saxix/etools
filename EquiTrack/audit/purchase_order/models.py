@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from model_utils.models import TimeStampedModel
 
@@ -12,7 +11,6 @@ class AuditorFirm(BaseFirm):
     pass
 
 
-@python_2_unicode_compatible
 class AuditorStaffMember(BaseStaffMember):
     auditor_firm = models.ForeignKey(AuditorFirm, verbose_name=_('Auditor'), related_name='staff_members')
 
@@ -40,7 +38,6 @@ class PurchaseOrderManager(models.Manager):
         return self.get(order_number=order_number)
 
 
-@python_2_unicode_compatible
 class PurchaseOrder(TimeStampedModel, models.Model):
     order_number = models.CharField(
         verbose_name=_('Purchase Order Number'),

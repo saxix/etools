@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import date
 
 from django.db import models, transaction
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext as _
 
@@ -58,7 +57,6 @@ class CountryProgrammeManager(models.Manager):
         return self.get_queryset().filter(from_date__lte=today, to_date__gt=today)
 
 
-@python_2_unicode_compatible
 class CountryProgramme(models.Model):
     """
     Represents a country programme cycle
@@ -114,7 +112,6 @@ class CountryProgramme(models.Model):
         super(CountryProgramme, self).save(*args, **kwargs)
 
 
-@python_2_unicode_compatible
 class ResultType(models.Model):
     """
     Represents a result type
@@ -135,7 +132,6 @@ class ResultType(models.Model):
         return self.name
 
 
-@python_2_unicode_compatible
 class Sector(TimeStampedModel):
     """
     Represents a sector
@@ -170,7 +166,6 @@ class OutputManager(models.Manager):
             'country_programme', 'result_type')
 
 
-@python_2_unicode_compatible
 class Result(MPTTModel):
     """
     Represents a result, wbs is unique
@@ -336,7 +331,6 @@ class Result(MPTTModel):
                 node.save()
 
 
-@python_2_unicode_compatible
 class LowerResult(TimeStampedModel):
 
     # Lower result is always an output
@@ -377,7 +371,6 @@ class LowerResult(TimeStampedModel):
         return super(LowerResult, self).save(**kwargs)
 
 
-@python_2_unicode_compatible
 class Unit(models.Model):
     """
     Represents an unit of measurement
@@ -391,7 +384,6 @@ class Unit(models.Model):
         return self.type
 
 
-@python_2_unicode_compatible
 class IndicatorBlueprint(TimeStampedModel):
     """
     IndicatorBlueprint module is a pattern for indicator
@@ -499,7 +491,6 @@ class IndicatorBlueprint(TimeStampedModel):
         return self.title
 
 
-@python_2_unicode_compatible
 class Disaggregation(TimeStampedModel):
     """
     Disaggregation model. For example: <Gender, Age>
@@ -514,7 +505,6 @@ class Disaggregation(TimeStampedModel):
         return self.name
 
 
-@python_2_unicode_compatible
 class DisaggregationValue(TimeStampedModel):
     """
     Disaggregation Value model. For example: Gender <Male, Female, Other>
@@ -639,7 +629,6 @@ class AppliedIndicator(TimeStampedModel):
         unique_together = (("indicator", "lower_result"),)
 
 
-@python_2_unicode_compatible
 class Indicator(TimeStampedModel):
     """
     Represents an indicator

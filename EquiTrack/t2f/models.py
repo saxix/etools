@@ -8,7 +8,6 @@ from functools import wraps
 from django.conf import settings
 from django.contrib.postgres.fields.array import ArrayField
 from django.db import connection, models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.timezone import now as timezone_now
 from django.utils.translation import ugettext, ugettext_lazy, ugettext_lazy as _
 from django_fsm import FSMField, transition
@@ -110,7 +109,6 @@ def mark_as_certified_or_completed_threshold_decorator(func):
     return wrapper
 
 
-@python_2_unicode_compatible
 class Travel(models.Model):
     PLANNED = 'planned'
     SUBMITTED = 'submitted'
@@ -466,7 +464,6 @@ class TravelActivity(models.Model):
         return self.travels.filter(traveler=self.primary_traveler).first().status
 
 
-@python_2_unicode_compatible
 class ItineraryItem(models.Model):
     travel = models.ForeignKey('Travel', related_name='itinerary', verbose_name=_('Travel'))
     origin = models.CharField(max_length=255, verbose_name=_('Origin'))
@@ -679,7 +676,6 @@ class ActionPoint(models.Model):
         )
 
 
-@python_2_unicode_compatible
 class Invoice(models.Model):
     PENDING = 'pending'
     PROCESSING = 'processing'
