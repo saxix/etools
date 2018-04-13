@@ -191,7 +191,7 @@ class TestUserMapper(BaseTenantTestCase):
         self.assertIsNone(section.name)
 
     def test_set_attribute_section_code(self):
-        """If section_name attribute, then set to last 4 chars of value"""
+        """If section_code attribute, then set to last 4 chars of value"""
         profile = ProfileFactory()
         self.assertIsNotNone(profile.section_code)
         res = self.mapper._set_attribute(profile, "section_code", "12345678")

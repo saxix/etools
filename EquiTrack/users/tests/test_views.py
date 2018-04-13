@@ -379,7 +379,7 @@ class TestGroupViewSet(BaseTenantTestCase):
         self.url = "/api/groups/"
 
     def test_get(self):
-        group = Group.objects.order_by('name').first()
+        group = Group.objects.order_by('id').first()
         response = self.forced_auth_req(
             "get",
             self.url,

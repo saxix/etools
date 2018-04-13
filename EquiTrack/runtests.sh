@@ -15,8 +15,8 @@ rm mig.out
 
 # Run unittests and coverage report
 coverage erase
-coverage run manage.py test -v 2 --noinput --keepdb --settings="$TEST_SETTINGS" "$@"
-coverage report --include "$@/*.py"
+time coverage run manage.py test --noinput --keepdb "$@"
+coverage report -m
 
 # Check code style unless running under tox, in which case tox runs flake8 separately
 if [[ $RUNNING_UNDER_TOX != 1 ]] ; then
