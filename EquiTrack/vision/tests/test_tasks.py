@@ -286,31 +286,6 @@ class TestSyncHandlerTask(BaseTenantTestCase):
         self.assertEqual(mock_logger.call_args[1], {})
 
 
-class TestUpdateAllPartners(BaseTenantTestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.country = Country.objects.first()
-
-    @mock.patch('vision.tasks.logger.exception')
-    def test_update_no_partners(self, mock_logger_exception):
-        """Ensure no exceptions if no partners exist"""
-        vision.tasks.update_all_partners()
-        self.assertEqual(mock_logger_exception.call_count, 0)
-
-    @mock.patch('vision.tasks.logger.exception')
-    def test_update_country_name(self, mock_logger_exception):
-        """Ensure no exceptions if country name provided"""
-        vision.tasks.update_all_partners(self.country.name)
-        self.assertEqual(mock_logger_exception.call_count, 0)
-
-    @mock.patch('vision.tasks.logger.exception')
-    def test_update(self, mock_logger_exception):
-        """Ensure no exceptions if partners exist"""
-        PartnerFactory()
-        vision.tasks.update_all_partners(self.country.name)
-        self.assertEqual(mock_logger_exception.call_count, 0)
-
-
 class TestUpdatePurchaseOrders(BaseTenantTestCase):
     @classmethod
     def setUpTestData(cls):

@@ -406,12 +406,6 @@ class SpotCheck(Engagement):
     def submit(self, *args, **kwargs):
         return super(SpotCheck, self).submit(*args, **kwargs)
 
-    @transition('status', source=Engagement.STATUSES.report_submitted, target=Engagement.STATUSES.final,
-                permission=_has_action_permission(action='finalize'))
-    def finalize(self, *args, **kwargs):
-        PartnerOrganization.spot_checks(self.partner, update_one=True, event_date=self.date_of_draft_report_to_unicef)
-        return super(SpotCheck, self).finalize(*args, **kwargs)
-
     def __str__(self):
         return 'SpotCheck ({}: {}, {})'.format(self.engagement_type, self.agreement.order_number, self.partner.name)
 
@@ -590,12 +584,6 @@ class Audit(Engagement):
     def submit(self, *args, **kwargs):
         return super(Audit, self).submit(*args, **kwargs)
 
-    @transition('status', source=Engagement.STATUSES.report_submitted, target=Engagement.STATUSES.final,
-                permission=_has_action_permission(action='finalize'))
-    def finalize(self, *args, **kwargs):
-        PartnerOrganization.audits_completed(self.partner, update_one=True)
-        return super(Audit, self).finalize(*args, **kwargs)
-
     def __str__(self):
         return 'Audit ({}: {}, {})'.format(self.engagement_type, self.agreement.order_number, self.partner.name)
 
@@ -678,12 +666,6 @@ class SpecialAudit(Engagement):
     )
     def submit(self, *args, **kwargs):
         return super(SpecialAudit, self).submit(*args, **kwargs)
-
-    @transition('status', source=Engagement.STATUSES.report_submitted, target=Engagement.STATUSES.final,
-                permission=_has_action_permission(action='finalize'))
-    def finalize(self, *args, **kwargs):
-        PartnerOrganization.audits_completed(self.partner, update_one=True)
-        return super(SpecialAudit, self).finalize(*args, **kwargs)
 
     def __str__(self):
         return 'Special Audit ({}: {}, {})'.format(self.engagement_type, self.agreement.order_number, self.partner.name)
