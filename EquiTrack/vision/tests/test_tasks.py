@@ -10,7 +10,6 @@ from django.utils import timezone
 import mock
 
 from EquiTrack.tests.cases import BaseTenantTestCase
-from partners.tests.factories import PartnerFactory
 from users.models import Country
 from users.tests.factories import CountryFactory
 from vision.exceptions import VisionException

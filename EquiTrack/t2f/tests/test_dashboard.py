@@ -5,7 +5,6 @@ import json
 from django.core.urlresolvers import reverse
 
 from EquiTrack.tests.cases import BaseTenantTestCase
-from partners.models import PartnerOrganization
 from publics.tests.factories import (
     PublicsBusinessAreaFactory,
     PublicsCurrencyFactory,
