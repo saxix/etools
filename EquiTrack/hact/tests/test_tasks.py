@@ -77,6 +77,7 @@ class TestPartnerHactSynchronizer(BaseTenantTestCase):
             year=year - 1,
             programmatic_q3=2
         )
+        PartnerHactSynchronizer(self.partner_organization).planned_visits()
         self.assertEqual(self.partner_organization.hact_values['programmatic_visits']['planned']['total'], 0)
 
     def test_planned_visits_non_gov(self):

@@ -6,7 +6,7 @@ from datetime import date, datetime
 from django.db import connection
 from django.db.models import F, Sum
 from django.db.transaction import atomic
-from django.utils import six, timezone
+from django.utils import timezone
 
 from celery.utils.log import get_task_logger
 
@@ -28,7 +28,8 @@ class PartnerHactSynchronizer(object):
         super().__init__()
 
     def planned_visits(self):
-        """:return: For current year sum all programmatic values of planned visits
+        """Updates the hact json field for planned visits values:
+        For current year sum all programmatic values of planned visits
         If partner type is Government, then default to 0 planned visits
         """
         year = date.today().year
@@ -38,14 +39,14 @@ class PartnerHactSynchronizer(object):
             pv = InterventionPlannedVisits.objects.filter(
                 intervention__agreement__partner=self.partner, year=year,
                 intervention__status__in=[Intervention.ACTIVE, Intervention.CLOSED, Intervention.ENDED]
-            )
-            pvq1 = pv.aggregate(Sum('programmatic_q1'))['programmatic_q1__sum'] or 0
-            pvq2 = pv.aggregate(Sum('programmatic_q2'))['programmatic_q2__sum'] or 0
-            pvq3 = pv.aggregate(Sum('programmatic_q3'))['programmatic_q3__sum'] or 0
-            pvq4 = pv.aggregate(Sum('programmatic_q4'))['programmatic_q4__sum'] or 0
+            ).aggregate(Sum('programmatic_q1'), Sum('programmatic_q2'), Sum('programmatic_q3'), Sum('programmatic_q4'))
+            pvq1 = pv['programmatic_q1__sum'] or 0
+            pvq2 = pv['programmatic_q2__sum'] or 0
+            pvq3 = pv['programmatic_q3__sum'] or 0
+            pvq4 = pv['programmatic_q4__sum'] or 0
 
         hact = json.loads(self.partner.hact_values) if isinstance(
-            self.partner.hact_values, six.text_type) else self.partner.hact_values
+            self.partner.hact_values, str) else self.partner.hact_values
         hact['programmatic_visits']['planned']['q1'] = pvq1
         hact['programmatic_visits']['planned']['q2'] = pvq2
         hact['programmatic_visits']['planned']['q3'] = pvq3
@@ -55,8 +56,7 @@ class PartnerHactSynchronizer(object):
         self.partner.save()
 
     def programmatic_visits(self):
-
-        """:return: all completed programmatic visits"""
+        """Updates the hact json fieldfor all completed programmatic visits"""
 
         pv_year = TravelActivity.objects.filter(
             travel_type=TravelType.PROGRAMME_MONITORING,
@@ -110,7 +110,7 @@ class PartnerHactSynchronizer(object):
         self.partner.save()
 
     def spot_checks(self):
-        """:return: all completed spot checks"""
+        """Updates the hact json field for all completed spot checks"""
 
         trip = TravelActivity.objects.filter(
             travel_type=TravelType.SPOT_CHECK,
@@ -145,9 +145,8 @@ class PartnerHactSynchronizer(object):
         self.partner.save()
 
     def audits_completed(self):
-        """
-        :return: all completed audit (including special audit)
-        """
+        """Updates the hact json field for all completed audit (including special audit)"""
+
         audits = Audit.objects.filter(
             partner=self.partner,
             status=Engagement.FINAL,
@@ -163,7 +162,7 @@ class PartnerHactSynchronizer(object):
     def outstanding_findings(self):
 
         hact = json.loads(self.partner.hact_values) if isinstance(
-            self.partner.hact_values, (six.text_type, six.string_types, six.binary_type)) else self.partner.hact_values
+            self.partner.hact_values, (str, bytes)) else self.partner.hact_values
         audits = Audit.objects.filter(partner=self.partner, status=Engagement.FINAL,
                                       date_of_draft_report_to_unicef__year=datetime.now().year)
         hact['outstanding_findings'] = sum([
