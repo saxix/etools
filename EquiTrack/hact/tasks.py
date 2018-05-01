@@ -4,7 +4,7 @@ import json
 from datetime import date, datetime
 
 from django.db import connection
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.db.transaction import atomic
 from django.utils import timezone
 
@@ -171,23 +171,26 @@ class PartnerHactSynchronizer(object):
 
 
 @app.task
-def update_hact_values(country_name=None):
+def update_hact_for_country(country_name):
+    country = Country.objects.get(name=country_name)
+    connection.set_tenant(country)
+    logger.info('Set country {}'.format(country_name))
+    for partner in PartnerOrganization.objects.filter(Q(reported_cy__gt=0) | Q(total_ct_cy__gt=0)):
+        logger.debug('Updating Partner {}'.format(partner.name))
+        with atomic():
+            hact_sync = PartnerHactSynchronizer(partner)
+            hact_sync.planned_visits()
+            hact_sync.programmatic_visits()
+            hact_sync.spot_checks()
+            hact_sync.audits_completed()
+            hact_sync.outstanding_findings()
+                
+@app.task
+def update_hact_values():
     logger.info('Hact Freeze Task process started')
-    countries = Country.objects.filter(vision_sync_enabled=True).exclude(schema_name='public')
-    if country_name:
-        countries = Country.objects.filter(name=country_name)
-
-    for country in countries:
-        connection.set_tenant(country)
-        for partner in PartnerOrganization.objects.all():
-            with atomic():
-                hact_sync = PartnerHactSynchronizer(partner)
-                hact_sync.planned_visits()
-                hact_sync.programmatic_visits()
-                hact_sync.spot_checks()
-                hact_sync.audits_completed()
-                hact_sync.outstanding_findings()
-    logger.info('Hact Freeze Task process finished')
+    for country in Country.objects.filter(vision_sync_enabled=True).exclude(schema_name='public'):
+        update_hact_for_country.delay(country.name)
+    logger.info('Hact Freeze Task generated all tasks')
 
 
 @app.task
