@@ -348,12 +348,12 @@ class PartnerOrganizationDeleteView(DestroyAPIView):
 
 class PartnerNotProgrammaticVisitCompliant(PartnerOrganizationListAPIView):
     def get_queryset(self, format=None):
-        return PartnerOrganization.objects.self.not_programmatic_visit_compliant()
+        return PartnerOrganization.objects.not_programmatic_visit_compliant()
 
 
 class PartnerNotSpotCheckCompliant(PartnerOrganizationListAPIView):
     def get_queryset(self, format=None):
-        return PartnerOrganization.objects.self.not_spot_check_compliant()
+        return PartnerOrganization.objects.not_spot_check_compliant()
 
 
 class PartnerNotAssuranceCompliant(PartnerOrganizationListAPIView):

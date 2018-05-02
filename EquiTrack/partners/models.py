@@ -207,28 +207,40 @@ def hact_default():
     }
 
 
-class PartnerOrganizationManager(models.Manager):
-
-    def get_queryset(self):
-        return super(PartnerOrganizationManager, self).get_queryset()
+class PartnerOrganizationQuerySet(models.QuerySet):
 
     def active(self, *args, **kwargs):
         return self.filter(Q(reported_cy__gt=0) | Q(total_ct_cy__gt=0), hidden=False, *args, **kwargs)
 
     def not_programmatic_visit_compliant(self, *args, **kwargs):
-        return self.filter(reported_cy__gt=PartnerOrganization.CT_MR_AUDIT_TRIGGER_LEVEL,
-                           hact_values__programmatic_visits__completed__total__gt=0, *args, **kwargs)
+        return self.filter(net_ct_cy__gt=PartnerOrganization.CT_MR_AUDIT_TRIGGER_LEVEL,
+                           hact_values__programmatic_visits__completed__total__gt=0,
+                           *args, **kwargs)
 
     def not_spot_check_compliant(self, *args, **kwargs):
-        return self.filter(net_ct_cy__gt=PartnerOrganization.CT_MR_AUDIT_TRIGGER_LEVEL,
-                           hact_values__spot_checks__completed__total__gt=0, *args, **kwargs)
+        return self.filter(Q(reported_cy__gt=PartnerOrganization.CT_CP_AUDIT_TRIGGER_LEVEL) |
+                           Q(planned_engagement__spot_check_follow_up_q1__gt=0) |
+                           Q(planned_engagement__spot_check_follow_up_q2__gt=0) |
+                           Q(planned_engagement__spot_check_follow_up_q3__gt=0) |
+                           Q(planned_engagement__spot_check_follow_up_q4__gt=0),  # aka required
+                           hact_values__spot_checks__completed__total=0,
+                           hact_values__audit__completed__total=0, *args, **kwargs)
 
     def not_assurance_compliant(self, *args, **kwargs):
-        return self.filter(reported_cy__gt=PartnerOrganization.CT_MR_AUDIT_TRIGGER_LEVEL,
-                           hact_values__programmatic_visits__completed__total__gt=0,
-                           net_ct_cy__gt=PartnerOrganization.CT_MR_AUDIT_TRIGGER_LEVEL,
-                           hact_values__spot_checks__completed__total__gt=0,
-                           hact_values__audits__completed__gt=0, *args, **kwargs)
+        return self.filter(Q(reported_cy__gt=PartnerOrganization.CT_CP_AUDIT_TRIGGER_LEVEL) |
+                           Q(
+                               Q(hact_values__spot_checks__completed__total__gt=0) |
+                               Q(planned_engagement__spot_check_follow_up_q1__gt=0) |
+                               Q(planned_engagement__spot_check_follow_up_q2__gt=0) |
+                               Q(planned_engagement__spot_check_follow_up_q3__gt=0) |
+                               Q(planned_engagement__spot_check_follow_up_q4__gt=0) |
+                               Q(planned_engagement__scheduled_audit=True) |
+                               Q(planned_engagement__special_audit=True)
+                           ) |
+                           Q(planned_engagement__spot_check_follow_up_q4__gt=0),
+                           hact_values__programmatic_visits__completed__total=0,
+                           hact_values__spot_checks__completed__total=0,
+                           hact_values__audits__completed__total=0, *args, **kwargs)
 
 
 @python_2_unicode_compatible
@@ -502,7 +514,7 @@ class PartnerOrganization(TimeStampedModel):
         verbose_name=_("Basis for Risk Rating"), max_length=50, default='', blank=True)
 
     tracker = FieldTracker()
-    objects = PartnerOrganizationManager()
+    objects = PartnerOrganizationQuerySet.as_manager()
 
     class Meta:
         ordering = ['name']

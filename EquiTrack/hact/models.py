@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 from django.utils.translation import ugettext_lazy as _
 
@@ -374,35 +374,29 @@ class AggregateHact(TimeStampedModel):
     @staticmethod
     def get_assurance_coverage():
         qs = PartnerOrganization.objects.all()
+
+        no_coverage = qs.active(hact_values__programmatic_visits__completed__total=0,
+                                hact_values__spot_checks__completed__total=0,
+                                hact_values__audits__completed=0)
+
+        coverage_ok = qs.active().exclude(hact_values__programmatic_visits__completed__total=0,
+                                          hact_values__spot_checks__completed__total=0,
+                                          hact_values__audits__completed=0)
+
         return {
+            # API placeholders for now
             'coverage_by_number_of_ips': [
                 ['Coverage by number of IPs', 'Count'],
-                ['No Coverage', qs.active(hact_values__programmatic_visits__completed__total__gt=0,
-                                          hact_values__spot_checks__completed__total__gt=0,
-                                          hact_values__audits__completed__gt=0).count()],
-                ['Partially Met Requirements', qs.active(
-                    (
-                        Q(hact_values__programmatic_visits__completed__total__gt=0) |
-                        Q(hact_values__spot_checks__completed__total__gt=0) |
-                        Q(hact_values__spot_checks__completed__total__gt=0)
-                    ),
-                ).count()],
-                ['Met Requirements', qs.filter().count()],
+                ['No Coverage', no_coverage.count()],
+                ['Partially Met Requirements', coverage_ok.count()],
+                ['Met Requirements', coverage_ok.count()]
             ],
             'coverage_by_cash_transfer': [
                 ['Coverage by Cash Transfer (USD) (Total)', 'Count'],
-                ['No Coverage', qs.active(hact_values__programmatic_visits__completed__total__gt=0,
-                                          hact_values__spot_checks__completed__total__gt=0,
-                                          hact_values__audits__completed__gt=0
-                                          ).aggregate(Sum('total_ct_cy'))['total_ct_cy__sum'] or 0()],
-                ['Partially Met Requirements', qs.active(
-                    (
-                        Q(hact_values__programmatic_visits__completed__total__gt=0) |
-                        Q(hact_values__spot_checks__completed__total__gt=0) |
-                        Q(hact_values__spot_checks__completed__total__gt=0)
-                    ),
-                ).aggregate(Sum('total_ct_cy'))['total_ct_cy__sum'] or 0()],
-                ['Met Requirements', qs.filter().aggregate(Sum('total_ct_cy'))['total_ct_cy__sum'] or 0()],
+                ['No Coverage', no_coverage.aggregate(total=Coalesce(Sum('total_ct_cy'), 0))['total']],
+                ['Partially Met Requirements', coverage_ok.aggregate(total=Coalesce(Sum('total_ct_cy'), 0))['total']],
+                ['Met Requirements', coverage_ok.aggregate(total=Coalesce(Sum('total_ct_cy'), 0))['total']],
+
             ],
             'table': [
                 {
