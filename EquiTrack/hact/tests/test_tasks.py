@@ -8,8 +8,7 @@ from audit.models import Engagement
 from audit.tests.factories import AuditFactory, SpecialAuditFactory, SpotCheckFactory
 from EquiTrack.tests.cases import BaseTenantTestCase
 from hact.models import AggregateHact
-from hact.tasks import PartnerHactSynchronizer, update_aggregate_hact_values, update_hact_values, \
-    update_hact_for_country
+from hact.tasks import PartnerHactSynchronizer, update_aggregate_hact_values, update_hact_for_country
 from hact.tests.factories import AggregateHactFactory
 from partners.models import Agreement, Intervention, PartnerOrganization, PartnerType
 from partners.tests.factories import (

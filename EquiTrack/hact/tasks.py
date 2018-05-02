@@ -184,7 +184,8 @@ def update_hact_for_country(country_name):
             hact_sync.spot_checks()
             hact_sync.audits_completed()
             hact_sync.outstanding_findings()
-                
+
+
 @app.task
 def update_hact_values():
     logger.info('Hact Freeze Task process started')
