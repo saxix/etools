@@ -8,7 +8,8 @@ from audit.models import Engagement
 from audit.tests.factories import AuditFactory, SpecialAuditFactory, SpotCheckFactory
 from EquiTrack.tests.cases import BaseTenantTestCase
 from hact.models import AggregateHact
-from hact.tasks import PartnerHactSynchronizer, update_aggregate_hact_values, update_hact_values
+from hact.tasks import PartnerHactSynchronizer, update_aggregate_hact_values, update_hact_values, \
+    update_hact_for_country
 from hact.tests.factories import AggregateHactFactory
 from partners.models import Agreement, Intervention, PartnerOrganization, PartnerType
 from partners.tests.factories import (
@@ -43,6 +44,7 @@ class TestPartnerHactSynchronizer(BaseTenantTestCase):
         year = date.today().year
         self.partner_organization = PartnerFactory(
             name="Partner Org 1",
+            reported_cy=1000
         )
         self.cp = CountryProgrammeFactory(
             name="CP 1",
@@ -301,7 +303,7 @@ class TestPartnerHactSynchronizer(BaseTenantTestCase):
             date_of_draft_report_to_unicef=datetime(datetime.today().year, 8, 1)
         )
 
-        update_hact_values()
+        update_hact_for_country(self.tenant.name)
         partner = PartnerOrganization.objects.get(pk=self.partner_organization.pk)
         self.assertEqual(partner.hact_values['programmatic_visits']['planned']['total'], 4)
         self.assertEqual(partner.hact_values['programmatic_visits']['planned']['q1'], 1)
