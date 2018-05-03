@@ -118,3 +118,4 @@ config/settings/custom.py
 *secrets.yml
 /dist
 .tox
+coverage.xml
