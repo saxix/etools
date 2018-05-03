@@ -27,4 +27,3 @@ class UpdateHactValuesAPIView(BasicTaskAPIView):
 class UpdateAggregateHactValuesAPIView(BasicTaskAPIView):
     task_function = update_aggregate_hact_values
     success_message = 'Task generated Successfully UpdateHactValues'
-
