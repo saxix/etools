@@ -1,8 +1,0 @@
-env:
-    - TOX_ENV=d110
-    - TOX_ENV=d111
-    - TOX_ENV=d20
-
-command:
-    - echo 'hi!'
-    - echo "Version is $TOX_ENV"
