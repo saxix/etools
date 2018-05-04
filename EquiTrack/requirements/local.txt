@@ -69,7 +69,7 @@ future==0.16.0
 gdal==2.2.4
 gunicorn==19.8.1
 html5lib==1.0.1
-httplib2==0.10.3
+httplib2==0.11.3
 idna==2.6
 imagesize==0.7.1          # via sphinx
 invoke==0.22.1
