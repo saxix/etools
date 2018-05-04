@@ -29,14 +29,14 @@ jobs:
 workflows:
   version: 2
   w1:
-    context: d111
     jobs:
-      - one
+      - one:
+        context: d111
       - two
   w2:
-    context: d110
     jobs:
-      - one
+      - one:
+        context: d110
       - two
 
 #        filters:
