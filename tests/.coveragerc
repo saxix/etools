@@ -7,7 +7,7 @@ omit =  */tests/*,
 source = etools
 
 [report]
-fail_under = 50
+fail_under = 1
 show_missing = true
 skip_covered = True
 exclude_lines =

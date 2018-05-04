@@ -1,8 +1,16 @@
 version: 2
 jobs:
+#  build_docker_test_image:
+#    working_directory: ~/code
+#    docker:
+#      - image: unicef/etools:test-base-p3
+#    steps:
+#      - checkout
+
   test:
     working_directory: ~/code
     # The primary container is an instance of the first list image listed. Your build commands run in this container.
+#    parallelism: 3
     docker:
       - image: unicef/etools:test-base-p3
         environment:
@@ -26,6 +34,7 @@ jobs:
 
       - store_artifacts:
           path: test-reports
+          destination: test-reports
 
       - store_artifacts:
           path: build/coverage
@@ -51,6 +60,7 @@ jobs:
     docker:
       - image: unicef/etools:test-base-p3
         environment:
+          TAG: me
           PGHOST: 127.0.0.1
           DATABASE_URL: "postgis://postgres:postgres@localhost:5432/circle_test"
       - image: circleci/postgres:9.5-alpine-postgis
@@ -72,31 +82,30 @@ jobs:
             curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
             tar -xz -C /tmp -f /tmp/docker-$VER.tgz
             mv /tmp/docker/* /usr/bin
-      - run:
-          name: Postgres Extensions
-          command: |
-            psql -U postgres -d template1 -c 'create extension if not exists hstore;'
-      - run:
-          name: see all docker containers
-          command: |
-            docker ps -a
-      - run:
-          name: see if postgres is available locally
-          command: |
-            pg_isready
-      - run:
-          name: Start DB Image
-          command: |
-            docker run --name docker-postgres -e PGUSER=postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=circle_test -d circleci/postgres:9.5-alpine-postgis
-      - run:
-          name: Postgres Extensions
-          command: |
-            sleep 20 && docker exec docker-postgres psql -U postgres -d template1 -c 'create extension if not exists hstore;'
+#      - run:
+#          name: Postgres Extensions
+#          command: |
+#            psql -U postgres -d template1 -c 'create extension if not exists hstore;'
+#      - run:
+#          name: see all docker containers
+#          command: |
+#            docker ps -a
+#      - run:
+#          name: see if postgres is available locally
+#          command: |
+#            pg_isready
+#      - run:
+#          name: Start DB Image
+#          command: |
+#            docker run --name docker-postgres -e PGUSER=postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=circle_test -d circleci/postgres:9.5-alpine-postgis
+#      - run:
+#          name: Postgres Extensions
+#          command: |
+#            sleep 20 && docker exec docker-postgres psql -U postgres -d template1 -c 'create extension if not exists hstore;'
       - run:
           name: Building the image
           command: |
-            TAG=${CIRCLE_BRANCH}
-            docker build -t unicef/etools:$TAG .
+            docker build -t saxix/etools:$TAG .
       - run:
           name: Test in the image
           command: |
@@ -105,39 +114,63 @@ jobs:
             docker run --network container:docker-postgres -it \
                 -e "DJANGO_SETTINGS_MODULE=etools.config.settings.local" \
                 -e "DATABASE_URL=postgis://postgres:postgres@localhost:5432/circle_test" \
-                -e "DISABLE_JWT_LOGIN=1" -e SECRET_KEY unicef/etools:$TAG /bin/bash \
+                -e "DISABLE_JWT_LOGIN=1" -e SECRET_KEY saxix/etools:$TAG /bin/bash \
                 -c "pip install -r src/requirements/test.txt; pytest src/etools -x"
 
       - run:
           name: Pushing to Docker Hub
           command: |
-            TAG=${CIRCLE_BRANCH}
             docker login -u $DOCKER_USER -p $DOCKER_PASS
             docker push saxix/etools:$TAG
 
 
 workflows:
   version: 2
-  django-111:
+  main:
     jobs:
       - test:
-          context: d111
-
-  django-110:
-    jobs:
-      - test:
-          context: d110,context
-
-  push_to_docker:
-    jobs:
-    - test:
-        context: d110,context
-
-    - dockerize:
-        context: d110,docker
-        requires:
-          - test
-        filters:
-          branches:
-            only:
+          context: d110
+      - dockerize:
+          context: d110
+          requires:
+            - test
+          filters:
+            branches:
+              only:
               - feature/main_package_refactoring_step2
+
+#  deploy_production:
+#      context: d110,docker
+#      requires:
+#            - test
+#            - dockerize
+#          filters:
+#            branches:
+#              only:
+#                - tag/*
+
+
+#  django-110:
+#    jobs:
+#      - test:
+#          context: d110
+#
+#  django-111:
+#    jobs:
+#      - test:
+#          context: d111
+#
+#
+#  push_to_docker:
+#    jobs:
+#    - test:
+#        context: d110,docker
+#
+#    - dockerize:
+#        context: d110,docker
+#        requires:
+#          - test
+#        filters:
+#          branches:
+#            only:
+#              - feature/main_package_refactoring_step2
