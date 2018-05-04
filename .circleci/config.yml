@@ -28,12 +28,22 @@ jobs:
 
 workflows:
   version: 2
-  build_and_test:
+  w1:
+    context: d111
     jobs:
-      - one:
-          context: d111
-      - one:
-          context: d110
+      - one
+      - two
+  w2:
+    context: d110
+    jobs:
+      - one
+      - two
+
+#        filters:
+#          branches:
+#            only: feature/main_package_refactoring_step2
+#      - one
+#        context: d111
 
 #        filters:
 #          branches:
