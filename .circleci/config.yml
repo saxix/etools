@@ -12,7 +12,7 @@ jobs:
               --header "Content-Type: application/json" \
               --data '{"build_parameters": {"TOX_ENV": "d111"}}' \
               --request POST \
-              https://circleci.com/api/v1.1/project/github/unicef/etools/tree/$CIRCLE_BRANCH?circle-token=$CIRCLE_TOKEN
+              https://circleci.com/api/v1.1/project/github/saxix/etools/tree/$CIRCLE_BRANCH?circle-token=$CIRCLE_TOKEN
 
 
   test:
@@ -124,15 +124,4 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test
-      - build_and_deploy:
-          requires:
-            - test
-          filters:
-            branches:
-              only:
-                - master
-                - staging
-                - develop
-                - prp-refactoring
-                - ci-updates
+      - build
