@@ -30,9 +30,9 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - one
+      - one:
           context: d111
-      - one
+      - one:
           context: d110
 
 #        filters:
