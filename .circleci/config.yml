@@ -113,12 +113,12 @@ jobs:
             TAG=${CIRCLE_BRANCH}
             HOSTIP=`/sbin/ip route|awk '/default/ { print $3 }'`
             docker run --network container:docker-postgres -it -e "DJANGO_SETTINGS_MODULE=EquiTrack.settings.local" -e "DATABASE_URL=postgis://postgres:postgres@localhost:5432/circle_test" -e "DISABLE_JWT_LOGIN=1" -e SECRET_KEY unicef/etools:$TAG /bin/bash -c "pip install -r requirements/test.txt; python manage.py test --noinput"
-      - run:
-          name: Pushing to Docker Hub
-          command: |
-            TAG=${CIRCLE_BRANCH}
-            docker login -u $DOCKER_USER -p $DOCKER_PASS
-            docker push unicef/etools:$TAG
+#      - run:
+#          name: Pushing to Docker Hub
+#          command: |
+#            TAG=${CIRCLE_BRANCH}
+#            docker login -u $DOCKER_USER -p $DOCKER_PASS
+#            docker push unicef/etools:$TAG
 
 workflows:
   version: 2
