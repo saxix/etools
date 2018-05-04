@@ -1,5 +1,20 @@
 version: 2
 jobs:
+  build:
+    docker:
+      - image: unicef/etools:test-base-p3
+    steps:
+      - run:
+          name: Check
+          command: |
+            env | sort
+            curl \
+              --header "Content-Type: application/json" \
+              --data '{"build_parameters": {"TOX_ENV": "d111"}}' \
+              --request POST \
+              https://circleci.com/api/v1.1/project/github/unicef/etools/tree/$CIRCLE_BRANCH?circle-token=$CIRCLE_TOKEN
+
+
   test:
     working_directory: ~/code
     # The primary container is an instance of the first list image listed. Your build commands run in this container.
@@ -16,28 +31,29 @@ jobs:
           POSTGRES_PASSWORD: postgres
     steps:
       - checkout
-      - restore_cache:
-          key: deps2-{{ .Branch }}--{{ checksum "src/requirements/test.txt" }}-{{ checksum ".circleci/config.yml" }}
       - run:
           name: Run Tests
           command: |
             pip install tox codacy-coverage
-            tox -re d110
-      - save_cache:
-          key: deps2-{{ .Branch }}--{{ checksum "src/requirements/test.txt" }}-{{ checksum ".circleci/config.yml" }}
-          paths:
-            - "env1"
-            - /root/.cache/pip
-      - store_artifacts:
-          path: build/coverage
-          destination: coverage
-      - store_artifacts:
-          path: build/report
-          destination: report
+            tox -re $TOX_ENV
+      - store_test_results:
+          path: test-results
 
-    post:
-      - bash <(curl -s https://codecov.io/bash)
-      - python-codacy-coverage -r coverage.xml
+#      - store_artifacts:
+#          path: test-reports
+#      - store_artifacts:
+#          path: build/coverage
+#          destination: coverage
+#      - store_artifacts:
+#          path: build/report
+#          destination: report
+#      - store_artifacts:
+#          path: build/flake
+#          destination: flake
+#      - run:
+#          command: |
+#            bash <(curl -s https://codecov.io/bash)
+#            python-codacy-coverage -r coverage.xml
 
   build_and_deploy:
     working_directory: ~/code
@@ -108,7 +124,7 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test
+      - build
       - build_and_deploy:
           requires:
             - test
