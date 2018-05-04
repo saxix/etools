@@ -28,8 +28,8 @@ jobs:
 
 workflows:
   version: 2
-  build_and_test:
+  w1:
     jobs:
       - one
       - two
-      - tree
+      - three
